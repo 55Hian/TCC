@@ -1,31 +1,36 @@
-"""Proxy do stream MJPEG da ESP32-CAM para o navegador."""
+"""Proxy MJPEG alimentado pela conexao compartilhada do backend."""
+import asyncio
+import anyio
+
 import cv2
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi.responses import StreamingResponse
 
-from core.config import settings
-from services.camera_service import gerador_de_frames
+from services.shared_camera import camera
 
 router = APIRouter(prefix="/api", tags=["stream"])
 
 
-def _frames_mjpeg():
-    # reencoda em JPEG pois camera_service ja decodifica para numpy (reuso sem duplicar logica de rede)
-    for frame in gerador_de_frames(settings.ESP32_STREAM_URL):
-        ok, jpg = cv2.imencode(".jpg", frame)
-        if not ok:
-            continue
-        yield (
-            b"--frame\r\n"
-            b"Content-Type: image/jpeg\r\n\r\n" + jpg.tobytes() + b"\r\n"
-        )
+async def _frames_mjpeg(request):
+    token = await anyio.to_thread.run_sync(camera.acquire, "mjpeg")
+    try:
+        sequence = 0
+        while not await request.is_disconnected():
+            item = await asyncio.to_thread(camera.wait_frame, sequence)
+            if item is None:
+                if camera.status()["status"] == "parado":
+                    break
+                continue
+            sequence, frame = item
+            ok, jpg = await asyncio.to_thread(cv2.imencode, ".jpg", frame)
+            if ok:
+                yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpg.tobytes() + b"\r\n"
+    finally:
+        with anyio.CancelScope(shield=True):
+            await anyio.to_thread.run_sync(camera.release, token)
 
 
 @router.get("/stream")
-def stream_camera():
-    """Se a ESP32-CAM estiver inacessivel, a resposta fica aberta sem enviar frames
-    (camera_service tenta reconectar indefinidamente); o front deve tratar timeout."""
-    return StreamingResponse(
-        _frames_mjpeg(),
-        media_type="multipart/x-mixed-replace; boundary=frame",
-    )
+def stream_camera(request: Request):
+    return StreamingResponse(_frames_mjpeg(request),
+        media_type="multipart/x-mixed-replace; boundary=frame")

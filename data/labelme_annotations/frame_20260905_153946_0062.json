@@ -147,7 +147,7 @@
       "mask": "iVBORw0KGgoAAAANSUhEUgAAAGkAAABnCAAAAAAm4zOWAAABMklEQVR4nO3a2w6CMBAE0JkN///LY6JBRSgptJ3ETefFcHGP20VegOgdAirs72m8s8cWtIadz1tPV+1XdFO6vsi6vnq9JrlYlNNazYgqeurZSVEag/xIA5F3/UGGtpvL8F7WBFwJV0sw9oQpXQi3m3P1WhIpJNokZJRok5BRok2CT6JNQkaJNumTKbUMKuBKTKlhUAEXFXAlUkm0Scgo0SY9M6WWQQVciSndDefqtSXSSUzYExCySZjSH6we4/hB5b9fEbJJyCjJJsEnySYhlaSX5Fg+/nxmmpNsEnySbJLpKnc0FTCFX5LyzQmDm4qNO85Rh7e1KqKDO2v3G62KpTtR2u/aVW6lVDrQcU46P8wh77Ud5ahsPaXqM0tVKyxdQE5rFi2B9/7hJ7+e0OZo4x3kAdwrI9nssisYAAAAAElFTkSuQmCC"
     }
   ],
-  "imagePath": "frame_20260905_153946_0062.jpg",
+  "imagePath": "../raw_frames/frame_20260905_153946_0062.jpg",
   "imageData": null,
   "imageHeight": 480,
   "imageWidth": 640

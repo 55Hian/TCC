@@ -1,38 +1,41 @@
-import time
+import threading
 import urllib.request
 
 import cv2
 import numpy as np
 
 
-def gerador_de_frames(url_stream):
-    """Conecta ao ESP32-CAM e entrega frames continuamente como generator."""
-    while True:
+def gerador_de_frames(url_stream, stop_event=None, on_status=None):
+    """Leitor exclusivo de rede; fecha a resposta em falha ou cancelamento."""
+    stop = stop_event if stop_event is not None else threading.Event()
+    report = on_status or (lambda status, erro=None: None)
+    while not stop.is_set():
         try:
+            report("conectando")
             print(f"[CAMERA] Conectando em {url_stream}...")
-            stream = urllib.request.urlopen(url_stream, timeout=10)
-            bytes_stream = b""
-            print("[CAMERA] Conectado! Enviando frames...")
-
-            while True:
-                bloco = stream.read(4096)
-                if not bloco:
-                    raise ConnectionError("stream encerrado")
-                bytes_stream += bloco
-                inicio = bytes_stream.find(b"\xff\xd8")
-                fim = bytes_stream.find(b"\xff\xd9")
-
-                if inicio != -1 and fim != -1:
-                    if inicio < fim:
-                        jpg = bytes_stream[inicio:fim + 2]
-                        bytes_stream = bytes_stream[fim + 2:]
-                        frame = cv2.imdecode(
-                            np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR
-                        )
+            with urllib.request.urlopen(url_stream, timeout=3) as stream:
+                buffer = b""
+                while not stop.is_set():
+                    bloco = stream.read1(4096)
+                    if not bloco:
+                        raise ConnectionError("stream encerrado")
+                    buffer += bloco
+                    if len(buffer) > 4 * 1024 * 1024:
+                        raise ValueError("JPEG excedeu limite de buffer")
+                    while True:
+                        inicio = buffer.find(b"\xff\xd8")
+                        if inicio < 0:
+                            buffer = buffer[-1:]
+                            break
+                        buffer = buffer[inicio:]
+                        fim = buffer.find(b"\xff\xd9", 2)
+                        if fim < 0:
+                            break
+                        jpg, buffer = buffer[:fim + 2], buffer[fim + 2:]
+                        frame = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
                         if frame is not None:
                             yield frame
-                    else:
-                        bytes_stream = bytes_stream[inicio:]
         except Exception as exc:
-            print(f"[CAMERA] Falha de rede: {exc}. Reconectando em 2 segundos...")
-            time.sleep(2)
+            report("reconectando", str(exc))
+            print(f"[CAMERA] Falha: {exc}. Reconectando em 2 segundos...")
+            stop.wait(2)

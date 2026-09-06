@@ -25,8 +25,9 @@ function conectarWebSocket() {
 
 async function atualizarStatusMonitor() {
   try {
-    const { status } = await apiGet("/api/monitoramento/status");
-    streamStatus.textContent = status;
+    const { status, erro, camera } = await apiGet("/api/monitoramento/status");
+    streamStatus.textContent = `${status} | camera: ${camera.status} (${camera.consumidores.join(", ") || "sem consumidores"})` + (erro ? ` | ${erro}` : "");
+    streamImg.style.visibility = camera.status === "recebendo" ? "visible" : "hidden";
   } catch (e) {
     streamStatus.textContent = "erro";
   }
@@ -43,6 +44,8 @@ btnIniciarMonitor.addEventListener("click", async () => {
 });
 
 btnPararMonitor.addEventListener("click", async () => {
+  streamImg.src = "data:,";
+  streamImg.removeAttribute("src");
   try {
     await apiPost("/api/monitoramento/parar");
   } catch (e) {

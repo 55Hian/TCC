@@ -10,6 +10,8 @@ from pydantic import BaseModel
 from core.config import settings
 from core.state import state
 from capturar_frames import capturar_frames
+from services.shared_camera import camera
+from services.annotation_paths import preparar_anotacoes
 
 router = APIRouter(prefix="/api/dataset", tags=["dataset"])
 
@@ -33,11 +35,12 @@ def listar_imagens():
 
     imagens = []
     for nome in sorted(os.listdir(pasta)):
-        if not _extensao_valida(nome):
+        caminho = os.path.join(pasta, nome)
+        if not _extensao_valida(nome) or not os.path.isfile(caminho):
             continue
         nome_base = os.path.splitext(nome)[0]
         anotado = os.path.isfile(os.path.join(settings.LABELME_ANNOTATIONS_DIR, f"{nome_base}.json"))
-        imagens.append({"nome": nome, "anotado": anotado})
+        imagens.append({"nome": nome, "anotado": anotado, "versao": str(os.stat(caminho).st_mtime_ns)})
     return {"imagens": imagens}
 
 
@@ -46,18 +49,20 @@ def obter_imagem(nome: str):
     caminho = os.path.join(settings.RAW_FRAMES_DIR, os.path.basename(nome))
     if not os.path.isfile(caminho):
         raise HTTPException(status_code=404, detail="Imagem nao encontrada.")
-    return FileResponse(caminho)
+    return FileResponse(caminho, headers={"Cache-Control": "no-cache"})
 
 
 def _executar_captura(intervalo, max_frames):
     state.captura_status = "rodando"
     state.captura_erro = None
+    state.captura_total = 0
     try:
         total = capturar_frames(
             pasta_saida=settings.RAW_FRAMES_DIR,
             intervalo=intervalo,
             max_frames=max_frames,
             mostrar_janela=False,
+            fonte_frames=camera.frames(),
         )
         state.captura_total = total
         state.captura_status = "concluido"
@@ -92,9 +97,10 @@ def abrir_labelme():
     """Abre o LabelMe (janela desktop separada) apontando para as imagens capturadas."""
     os.makedirs(settings.LABELME_ANNOTATIONS_DIR, exist_ok=True)
     try:
+        corrigidos = preparar_anotacoes(settings.RAW_FRAMES_DIR, settings.LABELME_ANNOTATIONS_DIR)
         processo = subprocess.Popen(
             [sys.executable, "-m", "labelme", settings.RAW_FRAMES_DIR, "--output", settings.LABELME_ANNOTATIONS_DIR]
         )
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"Falha ao abrir o LabelMe: {exc}")
-    return {"iniciado": True, "pid": processo.pid}
+    return {"iniciado": True, "pid": processo.pid, "referencias_corrigidas": corrigidos}

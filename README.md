@@ -2,6 +2,7 @@
 
 ESP32-CAM, YOLO e interface web FastAPI.
 
+- [Guia do código e da arquitetura](docs/GUIA_DO_CODIGO.md)
 - [Manual de uso](docs/MANUAL_DE_USO.md)
 - [Reconstrução do ambiente](docs/MANUAL_RECONSTRUCAO.md)
 - [Validação da Fase 6](docs/VALIDACAO_FASE_6.md)

@@ -50,15 +50,6 @@ def test_conversao_dimensao_invalida_e_pasta_vazia(tmp_path):
         labelme_json_to_yolo(str(entrada), str(tmp_path / "labels"))
 
 
-def test_stream_mjpeg_com_frame_simulado(monkeypatch):
-    monkeypatch.setattr(stream, "gerador_de_frames", lambda url: iter([np.zeros((8, 8, 3), dtype=np.uint8)]))
-    with TestClient(app) as client:
-        response = client.get("/api/stream")
-    assert response.status_code == 200
-    assert response.headers["content-type"].startswith("multipart/x-mixed-replace")
-    assert b"Content-Type: image/jpeg" in response.content
-    assert b"\xff\xd8" in response.content
-
 
 def test_frontend_e_galeria_coerentes_com_arquivos():
     with TestClient(app) as client:

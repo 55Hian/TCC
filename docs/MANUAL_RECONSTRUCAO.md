@@ -1,5 +1,7 @@
 # Reconstrução da arquitetura atual
 
+Para entender módulos, dependências, fluxos e pontos de extensão, consulte o [Guia do código e da arquitetura](GUIA_DO_CODIGO.md).
+
 Use o código versionado como fonte para reconstruir o sistema. Os trechos de código históricos abaixo descrevem a versão anterior e não devem substituir os arquivos atuais.
 
 1. Clone o repositório e entre na raiz: `git clone https://github.com/55Hian/TCC.git` e `cd TCC`. As alterações locais só estarão disponíveis no clone depois de um push autorizado.

@@ -3,7 +3,9 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel
 
+import time
 import worker
+from services.shared_camera import camera
 from core.state import state
 
 router = APIRouter(prefix="/api", tags=["eventos"])
@@ -32,7 +34,9 @@ def criar_evento(evento: EventoEntrada):
 
 @router.get("/monitoramento/status")
 def status_monitoramento():
-    return {"status": state.monitor_status, "erro": state.monitor_erro}
+    age = None if state.ultimo_processamento is None else time.monotonic() - state.ultimo_processamento
+    return {"status": state.monitor_status, "erro": state.monitor_erro,
+            "camera": camera.status(), "idade_processamento_segundos": age}
 
 
 @router.post("/monitoramento/iniciar")

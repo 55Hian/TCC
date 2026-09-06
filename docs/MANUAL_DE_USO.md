@@ -1,5 +1,7 @@
 # Manual de Instruções de Uso — Controle Autônomo de Inventário
 
+Para entender módulos, dependências, fluxos e pontos de extensão, consulte o [Guia do código e da arquitetura](GUIA_DO_CODIGO.md).
+
 Este manual descreve como usar o sistema neste workspace (`G:\000. TCC`), reorganizado em backend FastAPI + frontend web. Para o histórico de como o projeto foi originalmente reconstruído (estrutura antiga em `projeto/`), veja [MANUAL_RECONSTRUCAO.md](MANUAL_RECONSTRUCAO.md).
 
 ---
@@ -174,3 +176,22 @@ Para executar as 50 épocas, remova `--check`. Use batch 2 para o modelo M e con
 A API retorna 201 ao criar eventos. Os testes ficam em `backend/app/tests`, e o comando de inicializa??o acima resolve os imports atuais. O treino e a captura exibem status; a interface ainda não possui barra de progresso por época e o total capturado só é atualizado ao concluir. Atualize a p?gina para recarregar a galeria ap?s capturar/anotar.
 
 Veja os resultados e pend?ncias no [checklist da Fase 6](VALIDACAO_FASE_6.md).
+
+## Camera compartilhada (correcao de concorrencia)
+
+O backend abre uma unica conexao HTTP com a ESP32-CAM quando o primeiro consumidor inicia. Proxy MJPEG, monitoramento e captura pela API recebem copias do ultimo frame, sem disputar conexoes. A conexao permanece disponivel ate encerrar o backend. Consumidores lentos pulam frames; nao acumulam uma fila de imagens antigas.
+
+Execute apenas um processo do servidor:
+
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn main:app --app-dir backend/app --port 8000 --workers 1
+```
+
+Reinicie o servidor depois de atualizar o codigo. Nao mantenha outro servidor, script de captura/CLI ou navegador conectado diretamente ao IP da camera enquanto usa o backend. Os scripts desktop ainda acessam a camera diretamente; prefira a captura pela aba Dataset durante o monitoramento.
+
+`GET /api/monitoramento/status` agora inclui `camera.status`, `camera.erro`, `camera.idade_frame_segundos`, `camera.frames_recebidos` e `idade_processamento_segundos`. O monitoramento informa `aguardando_camera` quando nao recebe novos frames. A imagem fica oculta na interface quando a camera nao esta recebendo. Frames com mais de tres segundos nao sao entregues aos consumidores; a captura encerra com erro depois de 15 segundos sem novos frames. O leitor tenta reconectar automaticamente. Parar o monitoramento cancela a espera por frames sem precisar receber outra imagem.
+
+
+### LabelMe: janela ausente apos listar imagens
+
+Diagnostico em 2026-09-06: o LabelMe aguardava um dialogo de erro durante a carga inicial, antes de mostrar a janela principal. Corrigidas 95 referencias imagePath nos JSONs para ../raw_frames/arquivo.jpg; todas as anotacoes foram lidas pelo proprio LabelMe sem erro. O endpoint de anotacao agora verifica e repara referencias quebradas quando encontra uma unica imagem correspondente, antes de iniciar o processo. Classes e caixas permanecem preservadas.

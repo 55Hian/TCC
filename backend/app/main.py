@@ -12,13 +12,20 @@ from fastapi.staticfiles import StaticFiles
 
 from core.config import BASE_DIR, settings
 from core.state import state
+from services.shared_camera import camera
+import worker
 from routers import dataset, eventos, modelos, stream, treino
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     state.registrar_loop(asyncio.get_running_loop())
-    yield
+    try:
+        yield
+    finally:
+        await asyncio.to_thread(worker.encerrar)
+        await asyncio.to_thread(camera.close)
+        state.main_loop = None
 
 
 app = FastAPI(title="Controle Autonomo de Inventario - API", lifespan=lifespan)

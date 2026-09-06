@@ -1,6 +1,8 @@
 import argparse
 import os
 import time
+import uuid
+from pathlib import Path
 
 import cv2
 
@@ -14,7 +16,7 @@ def deve_capturar(ultimo_salvamento, agora, intervalo):
 
 
 def gerar_nome_arquivo(contador):
-    return time.strftime("frame_%Y%m%d_%H%M%S") + f"_{contador:04d}.jpg"
+    return time.strftime("frame_%Y%m%d_%H%M%S") + f"_{uuid.uuid4().hex[:8]}_{contador:04d}.jpg"
 
 
 def capturar_frames(
@@ -49,12 +51,18 @@ def capturar_frames(
             if deve_capturar(ultimo_salvamento, agora, intervalo):
                 nome = gerar_nome_arquivo(contador)
                 caminho = os.path.join(pasta_saida, nome)
-                if cv2.imwrite(caminho, frame):
-                    contador += 1
-                    ultimo_salvamento = agora
-                    print(f"[CAPTURA] Salvo: {caminho}")
-                else:
-                    print(f"[CAPTURA_ERRO] Nao foi possivel salvar: {caminho}")
+                ok, jpeg = cv2.imencode(".jpg", frame)
+                if not ok:
+                    raise OSError("Falha ao codificar imagem JPEG")
+                temporario = Path(caminho + ".part")
+                try:
+                    temporario.write_bytes(jpeg.tobytes())
+                    os.replace(temporario, caminho)
+                finally:
+                    temporario.unlink(missing_ok=True)
+                contador += 1
+                ultimo_salvamento = agora
+                print(f"[CAPTURA] Salvo: {caminho}")
 
             if max_frames > 0 and contador >= max_frames:
                 print(f"[CAPTURA] Limite de {max_frames} frames atingido.")
@@ -62,6 +70,8 @@ def capturar_frames(
     except KeyboardInterrupt:
         print("[CAPTURA] Interrompido pelo usuario.")
     finally:
+        if hasattr(gerador, "close"):
+            gerador.close()
         if mostrar_janela:
             cv2.destroyAllWindows()
 
