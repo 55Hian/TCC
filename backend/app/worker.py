@@ -5,6 +5,7 @@ Roda em background para nao bloquear o event loop do FastAPI, ja que
 """
 import threading
 import time
+from datetime import datetime, timezone
 
 from core.config import settings
 from core.state import state
@@ -37,7 +38,7 @@ def _loop_monitoramento():
             if agora - ultimo_processamento >= settings.INTERVALO_PROCESSAMENTO:
                 df_atual = ia_visao.processar_frame(frame)
                 for evento in gerar_eventos(df_atual):
-                    evento["timestamp"] = time.time()
+                    evento["timestamp"] = datetime.now(timezone.utc).isoformat()
                     state.adicionar_evento(evento)
                 ultimo_processamento = agora
     except Exception as exc:

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Controle Autônomo de Inventário</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <header>
+    <h1>Controle Autônomo de Inventário</h1>
+    <nav>
+      <button class="tab-btn active" data-tab="monitoramento">Monitoramento</button>
+      <button class="tab-btn" data-tab="treino">Treino</button>
+      <button class="tab-btn" data-tab="dataset">Dataset</button>
+      <button class="tab-btn" data-tab="experimentos">Experimentos</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="tab-monitoramento" class="tab-content active">
+      <div class="grid-2">
+        <div class="card">
+          <h2>Câmera ao vivo <span id="stream-status" class="badge">—</span></h2>
+          <img id="stream-img" alt="Stream da ESP32-CAM" />
+          <div class="actions">
+            <button id="btn-iniciar-monitor">Iniciar monitoramento</button>
+            <button id="btn-parar-monitor" class="secundario">Parar</button>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Eventos em tempo real</h2>
+          <ul id="lista-eventos" class="lista-eventos"></ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="tab-treino" class="tab-content">
+      <div class="card">
+        <h2>Disparar treinamento</h2>
+        <form id="form-treino">
+          <label>Modelo base
+            <select id="select-modelo"></select>
+          </label>
+          <label>Épocas <input type="number" id="input-epochs" value="50" min="1"></label>
+          <label>Tamanho da imagem <input type="number" id="input-imgsz" value="640" min="32" step="32"></label>
+          <label>Fração do dataset <input type="number" id="input-fraction" value="1.0" min="0.01" max="1" step="0.01"></label>
+          <button type="submit">Iniciar treino</button>
+        </form>
+        <p id="treino-status">Status: —</p>
+      </div>
+    </section>
+
+    <section id="tab-dataset" class="tab-content">
+      <div class="card">
+        <h2>Captura de frames</h2>
+        <form id="form-captura">
+          <label>Intervalo (s) <input type="number" id="input-intervalo" value="2" min="0.1" step="0.1"></label>
+          <label>Máx. frames <input type="number" id="input-max-frames" value="20" min="1"></label>
+          <button type="submit">Capturar</button>
+        </form>
+        <p id="captura-status">Status: —</p>
+        <button id="btn-abrir-labelme" class="secundario">Abrir LabelMe para anotar</button>
+      </div>
+      <div class="card">
+        <h2>Galeria (<span id="galeria-total">0</span> imagens)</h2>
+        <div id="galeria" class="galeria"></div>
+      </div>
+    </section>
+
+    <section id="tab-experimentos" class="tab-content">
+      <div class="card">
+        <h2>Experimentos de treino</h2>
+        <div id="lista-experimentos" class="grid-experimentos"></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/tabs.js"></script>
+  <script src="/js/dashboard.js"></script>
+  <script src="/js/treino.js"></script>
+  <script src="/js/dataset.js"></script>
+  <script src="/js/experimentos.js"></script>
+</body>
+</html>
