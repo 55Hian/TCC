@@ -1,10 +1,26 @@
+# Reconstrução da arquitetura atual
+
+Use o código versionado como fonte para reconstruir o sistema. Os trechos de código históricos abaixo descrevem a versão anterior e não devem substituir os arquivos atuais.
+
+1. Clone o repositório e entre na raiz: `git clone https://github.com/55Hian/TCC.git` e `cd TCC`. As alterações locais só estarão disponíveis no clone depois de um push autorizado.
+2. Crie o ambiente: `python -m venv .venv`.
+3. Instale as dependências: `.\.venv\Scripts\python.exe -m pip install -r requirements.txt`.
+4. Confira `models/pretrained/`, `experiments/treinamentos/` e `data/`. O dataset externo não é versionado. Para treinar com o dataset próprio, mantenha `TCC_USE_EXTERNAL_VALIDATION_DATASET=false`.
+5. Configure `.env` na raiz com `TCC_ESP32_STREAM_URL` e, se necessário, `TCC_MODEL_PATH` apontando para um `best.pt` existente. A instalação da build CUDA do PyTorch depende da GPU e do driver; confirme `torch.cuda.is_available()` antes de treinar.
+6. Execute `.\.venv\Scripts\python.exe -m pytest backend/app/tests -v`.
+7. Suba `.\.venv\Scripts\python.exe -m uvicorn main:app --app-dir backend/app --port 8000` e abra http://localhost:8000.
+
+A estrutura e o fluxo de captura, anotação, treino e monitoramento atuais estão no [manual de uso](MANUAL_DE_USO.md). O checklist de entrega está em [VALIDACAO_FASE_6.md](VALIDACAO_FASE_6.md).
+
+---
+
 # Manual de Reconstrução do Projeto — Controle Autônomo de Inventário (TCC)
 
 > **Nota (reorganização pós-TCC):** este documento descreve a estrutura **original** (pasta `projeto/`, sem interface web), preservada aqui por valor histórico. O sistema foi desde então reorganizado em `backend/app/` (FastAPI) + `frontend/` (HTML/CSS/JS) + `data/`/`models/`/`experiments/`. Para a arquitetura e os comandos **atuais**, use [MANUAL_DE_USO.md](MANUAL_DE_USO.md).
 
 > Este documento foi gerado a partir do histórico completo da sessão de desenvolvimento (E:\TCC, disco fisicamente perdido) e do conteúdo do TCC (`Controle Autônomo de Inventário`, SENAC Santo Amaro, 2026). Ele contém tudo que é necessário para recriar o repositório do zero: estrutura de pastas, conteúdo integral dos arquivos Python, dependências, comandos de execução e o histórico de decisões técnicas que levaram ao estado atual do código.
 >
-> Use este arquivo como fonte única da verdade para reconstruir o projeto em `D:\TCC2026` (ou em qualquer outro caminho).
+> Referência histórica: este arquivo foi usado como fonte para reconstruir o projeto em `D:\TCC2026` (ou em qualquer outro caminho).
 
 ---
 

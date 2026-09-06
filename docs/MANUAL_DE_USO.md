@@ -31,7 +31,7 @@ Depois abra **http://localhost:8000** no navegador. A interface tem 4 abas:
 
 | Aba | Para que serve |
 |---|---|
-| Monitoramento | Ver o stream ao vivo da ESP32-CAM e os eventos (`inserido`/`retirado`/`interacao_mao`) em tempo real via WebSocket; botões iniciar/parar |
+| Monitoramento | Ver o stream e os eventos em tempo real via WebSocket; o detector atual gera `interacao_mao`, e a API tamb?m aceita eventos inseridos manualmente; botões iniciar/parar |
 | Treino | Escolher um dos 4 modelos-base (`models/pretrained/`), configurar épocas/imgsz/fração e disparar o treino; acompanhar status |
 | Dataset | Capturar novos frames da câmera, abrir o LabelMe para anotar, ver a galeria com status anotado/pendente |
 | Experimentos | Comparar resultados (`results.png`, `results.csv`) de cada treino já rodado |
@@ -159,3 +159,18 @@ G:\000. TCC\
 | `FileNotFoundError` ao treinar dataset próprio | `data/labelme_annotations/` vazio | Anote as imagens no LabelMe antes de treinar (seção 4) |
 | Modelo não detecta nada | Treino de teste com `fraction` baixo ou poucas épocas | Treinar com `fraction=1.0` e mais épocas |
 | `/api/stream` fica sem exibir vídeo | ESP32-CAM inacessível; `camera_service` tenta reconectar indefinidamente sem lançar erro | Verificar rede/IP da câmera; a página não trava, só fica sem imagem |
+
+## 10. Experimentos e validação da entrega
+
+Na raiz do repositório, confira os caminhos sem iniciar um treino:
+
+```powershell
+.\.venv\Scripts\python.exe scripts/experimento_yolo26.py --help
+.\.venv\Scripts\python.exe scripts/experimento_yolo26.py yolo26s.pt comparativo_novo 4 2 --check
+```
+
+Para executar as 50 épocas, remova `--check`. Use batch 2 para o modelo M e confirme que nenhum treino está rodando na interface ou em outro terminal. O script usa GPU `device=0`. O `path` de `data/dataset/data.yaml` deve apontar para a pasta absoluta atual; ao mudar de computador, regenere pelo pipeline ou ajuste esse campo.
+
+A API retorna 201 ao criar eventos. Os testes ficam em `backend/app/tests`, e o comando de inicializa??o acima resolve os imports atuais. O treino e a captura exibem status; a interface ainda não possui barra de progresso por época e o total capturado só é atualizado ao concluir. Atualize a p?gina para recarregar a galeria ap?s capturar/anotar.
+
+Veja os resultados e pend?ncias no [checklist da Fase 6](VALIDACAO_FASE_6.md).

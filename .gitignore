@@ -12,6 +12,6 @@ Thumbs.db
 # não deve ser versionado nem, futuramente, enviado ao GitHub.
 data/external_validation/
 
-# NOTA: runs/ e treinamentos/ (pesos e resultados de treino) são versionados
-# de propósito no commit de segurança inicial (Fase 0), antes da decisão de
-# limpeza de duplicados. Regras de ignore para eles serão revisadas na Fase 6.
+# Saidas avulsas; experimentos existentes continuam versionados.
+runs/
+.env
