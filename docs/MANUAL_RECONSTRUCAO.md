@@ -1,5 +1,7 @@
 # Manual de Reconstrução do Projeto — Controle Autônomo de Inventário (TCC)
 
+> **Nota (reorganização pós-TCC):** este documento descreve a estrutura **original** (pasta `projeto/`, sem interface web), preservada aqui por valor histórico. O sistema foi desde então reorganizado em `backend/app/` (FastAPI) + `frontend/` (HTML/CSS/JS) + `data/`/`models/`/`experiments/`. Para a arquitetura e os comandos **atuais**, use [MANUAL_DE_USO.md](MANUAL_DE_USO.md).
+
 > Este documento foi gerado a partir do histórico completo da sessão de desenvolvimento (E:\TCC, disco fisicamente perdido) e do conteúdo do TCC (`Controle Autônomo de Inventário`, SENAC Santo Amaro, 2026). Ele contém tudo que é necessário para recriar o repositório do zero: estrutura de pastas, conteúdo integral dos arquivos Python, dependências, comandos de execução e o histórico de decisões técnicas que levaram ao estado atual do código.
 >
 > Use este arquivo como fonte única da verdade para reconstruir o projeto em `D:\TCC2026` (ou em qualquer outro caminho).
@@ -7,6 +9,7 @@
 ---
 
 ## 1. Visão geral da arquitetura
+
 
 O sistema é um protótipo de **controle autônomo de inventário** que usa uma **ESP32-CAM** para capturar vídeo, transmite o fluxo para um notebook via Wi-Fi/HTTP, processa os frames com **YOLOv8 (Ultralytics)**, compara o estado anterior e atual da cena com **pandas** para gerar eventos de estoque (produto inserido, retirado, interação com a mão), e envia esses eventos para uma API HTTP externa via **requests**.
 

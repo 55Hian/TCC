@@ -1,12 +1,12 @@
 # Manual de Instruções de Uso — Controle Autônomo de Inventário
 
-Este manual descreve como usar o sistema já reconstruído e configurado neste workspace (`G:\000. TCC`). Para o histórico de como o projeto foi reconstruído, veja [MANUAL_RECONSTRUCAO.md](MANUAL_RECONSTRUCAO.md).
+Este manual descreve como usar o sistema neste workspace (`G:\000. TCC`), reorganizado em backend FastAPI + frontend web. Para o histórico de como o projeto foi originalmente reconstruído (estrutura antiga em `projeto/`), veja [MANUAL_RECONSTRUCAO.md](MANUAL_RECONSTRUCAO.md).
 
 ---
 
 ## 1. Pré-requisitos
 
-- Ambiente virtual `.venv` já criado na raiz do projeto, com todas as dependências de [requirements.txt](requirements.txt) instaladas.
+- Ambiente virtual `.venv` já criado na raiz do projeto, com todas as dependências de [requirements.txt](../requirements.txt) instaladas.
 - ESP32-CAM ligada na mesma rede, transmitindo em:
   ```text
   http://192.168.15.59:81/stream
@@ -17,133 +17,104 @@ Sempre execute os comandos a partir da raiz do workspace:
 
 ```powershell
 cd "G:\000. TCC"
-$env:PYTHONPATH = "$PWD\projeto"
 ```
-
-Todos os exemplos abaixo assumem que essas duas linhas já foram executadas no terminal.
 
 ---
 
-## 2. Configuração central (`projeto/utils/config.py`)
+## 2. Subir o sistema (backend + interface web)
 
-| Variável | Função |
+```powershell
+.\.venv\Scripts\python.exe -m uvicorn main:app --app-dir backend\app --port 8000
+```
+
+Depois abra **http://localhost:8000** no navegador. A interface tem 4 abas:
+
+| Aba | Para que serve |
+|---|---|
+| Monitoramento | Ver o stream ao vivo da ESP32-CAM e os eventos (`inserido`/`retirado`/`interacao_mao`) em tempo real via WebSocket; botões iniciar/parar |
+| Treino | Escolher um dos 4 modelos-base (`models/pretrained/`), configurar épocas/imgsz/fração e disparar o treino; acompanhar status |
+| Dataset | Capturar novos frames da câmera, abrir o LabelMe para anotar, ver a galeria com status anotado/pendente |
+| Experimentos | Comparar resultados (`results.png`, `results.csv`) de cada treino já rodado |
+
+> Sem autenticação — não exponha esse servidor fora da rede local.
+
+---
+
+## 3. Configuração central (`backend/app/core/config.py`)
+
+| Campo | Função |
 |---|---|
 | `ESP32_STREAM_URL` | Endereço do stream MJPEG da câmera |
-| `API_ENDPOINT` | Backend HTTP que recebe os eventos de inventário |
+| `API_ENDPOINT` | Endpoint HTTP para eventos externos (compat.) |
 | `CLASSES` | Classes do dataset próprio do TCC (`creme_leite`, `gelatina`, `cha`, `mao`) |
-| `EXTERNAL_CLASSES` | Classes do dataset externo de validação (`yolo/`, 10 produtos) |
-| `USE_EXTERNAL_VALIDATION_DATASET` | `True` = usa o dataset externo `yolo/`; `False` = usa o dataset próprio |
-| `MODEL_PATH` | Caminho do modelo treinado usado na inferência |
+| `EXTERNAL_CLASSES` | Classes do dataset externo de validação (`data/external_validation/`, 10 produtos) |
+| `USE_EXTERNAL_VALIDATION_DATASET` | `True` = usa o dataset externo; `False` = usa o dataset próprio |
+| `BASE_MODEL` | Modelo-base usado por padrão no treino (um dos 4 em `models/pretrained/`) |
+| `MODEL_PATH` | Caminho do modelo treinado usado na inferência (`experiments/treinamentos/modelo_produtos/weights/best.pt`) |
+| `RAW_FRAMES_DIR`, `LABELME_ANNOTATIONS_DIR`, `YOLO_LABELS_DIR`, `DATASET_DIR` | Pastas do pipeline de dataset (`data/`) |
 
-> **Estado atual:** `USE_EXTERNAL_VALIDATION_DATASET = True`. O sistema está apontando para o dataset externo em `G:\000. TCC\yolo`. Para treinar com suas próprias imagens, mude para `False` (ver seção 5).
+Todos os campos podem ser sobrescritos sem editar código, via variáveis de ambiente com prefixo `TCC_` (arquivo `.env` na raiz do repo), ex.:
+
+```text
+TCC_ESP32_STREAM_URL=http://192.168.15.60:81/stream
+TCC_USE_EXTERNAL_VALIDATION_DATASET=true
+```
 
 ---
 
-## 3. Capturar frames da ESP32-CAM
+## 4. Capturar frames e anotar (via interface ou manual)
 
-Script: [projeto/capturar_frames.py](projeto/capturar_frames.py)
+**Pela interface:** aba **Dataset** → formulário "Captura de frames" (intervalo/máx. frames) → botão "Abrir LabelMe para anotar" (abre a janela do LabelMe já apontando para `data/raw_frames`, salvando os JSONs em `data/labelme_annotations`).
 
-Captura frames **automaticamente por intervalo de tempo** (não precisa apertar tecla) e salva em `dataset_fotos/`.
-
-```powershell
-.\.venv\Scripts\python.exe .\projeto\capturar_frames.py --intervalo 2 --max-frames 100
-```
-
-| Parâmetro | Padrão | Descrição |
-|---|---|---|
-| `--saida` | `dataset_fotos` | Pasta onde os JPEGs são salvos |
-| `--intervalo` | `2.0` | Segundos entre cada captura automática |
-| `--max-frames` | `0` (ilimitado) | Encerra sozinho ao atingir esse número de frames |
-| `--sem-janela` | desligado | Roda sem abrir janela (modo headless) |
-
-Para encerrar antes do limite: pressione `Q` com a janela em foco, ou `Ctrl+C` no terminal.
-
----
-
-## 4. Anotar as imagens no LabelMe
-
-Não use LabelImg (instável neste ambiente). O fluxo oficial é **LabelMe**.
+**Manual (linha de comando):**
 
 ```powershell
-.\.venv\Scripts\python.exe -m labelme
+$env:PYTHONPATH = "$PWD\backend\app"
+.\.venv\Scripts\python.exe .\backend\app\capturar_frames.py --intervalo 2 --max-frames 100
+.\.venv\Scripts\python.exe -m labelme data\raw_frames --output data\labelme_annotations
 ```
 
-1. **Open Dir** → selecione `dataset_fotos`.
-2. Desenhe retângulos em todos os objetos visíveis.
-3. Use exatamente estas classes (definidas em `CLASSES`):
-   ```text
-   creme_leite
-   gelatina
-   cha
-   mao
-   ```
-4. Salve cada JSON em `dataset_labels/`.
-5. Sempre que houver uma mão interagindo com um produto, anote também a caixa `mao`.
+Use exatamente estas classes ao anotar: `creme_leite`, `gelatina`, `cha`, `mao`. Sempre que houver uma mão interagindo com um produto, anote também a caixa `mao`.
 
 ---
 
 ## 5. Treinar o modelo
 
-### 5.1. Com o dataset próprio (recomendado para o TCC)
+**Pela interface:** aba **Treino** → escolha o modelo-base entre os 4 disponíveis, ajuste épocas/imgsz/fração → "Iniciar treino". O status é acompanhado na própria aba (`ocioso` / `rodando` / `concluido` / `erro`).
 
-1. Em `projeto/utils/config.py`, defina:
-   ```python
-   USE_EXTERNAL_VALIDATION_DATASET = False
-   ```
-2. Garanta que existam JSONs em `dataset_labels/` (gerados no passo anterior).
-3. Execute:
-   ```powershell
-   .\.venv\Scripts\python.exe -c "from services.training_service import rodar_pipeline_treinamento; rodar_pipeline_treinamento(epochs=50, imgsz=640, fraction=1.0)"
-   ```
+**Manual (linha de comando):**
 
-O pipeline converte os JSONs para YOLO (`labels_yolo/`), monta `dataset/images|labels/{train,val}`, gera `dataset/data.yaml` e treina o modelo.
-
-### 5.2. Com o dataset externo (`yolo/`, validação de pipeline)
-
-Mantenha `USE_EXTERNAL_VALIDATION_DATASET = True` e execute o mesmo comando acima. Nesse modo, o treino usa diretamente `yolo/data.yaml` (10 classes de produtos), sem passar por LabelMe.
-
-Use `fraction` para treinos rápidos de teste (ex.: `fraction=0.01`) e `fraction=1.0` para um treino completo.
-
-### 5.3. Resultado
-
-O modelo treinado é salvo em:
-
-```text
-treinamentos/modelo_produtos/weights/best.pt
+```powershell
+$env:PYTHONPATH = "$PWD\backend\app"
+.\.venv\Scripts\python.exe -c "from services.training_service import rodar_pipeline_treinamento; rodar_pipeline_treinamento(epochs=50, imgsz=640, fraction=1.0)"
 ```
 
-Esse é o caminho lido por `MODEL_PATH` e usado na inferência.
+O pipeline converte os JSONs para YOLO (`data/yolo_labels/`), monta `data/dataset/images|labels/{train,val}`, gera `data/dataset/data.yaml` e treina o modelo. O resultado é salvo em `experiments/treinamentos/modelo_produtos/weights/best.pt` — caminho lido por `MODEL_PATH` e usado na inferência.
 
 > **Aviso:** um modelo treinado com `fraction` baixo ou poucas épocas é apenas um teste de pipeline, não um modelo confiável. Para uso real, treine com `fraction=1.0` e um número adequado de épocas.
+> **GPU de 4GB (GTX 1650):** nunca rode dois treinos ao mesmo tempo; batch=4 (modelos S) / batch=2 (modelos M) cabem na VRAM.
 
 ---
 
-## 6. Executar o monitoramento (inferência + eventos + API)
+## 6. Monitoramento sem interface (modo console, avançado)
 
 ```powershell
-.\.venv\Scripts\python.exe .\projeto\main.py
+$env:PYTHONPATH = "$PWD\backend\app"
+.\.venv\Scripts\python.exe .\backend\app\cli_monitor.py
 ```
 
-O que acontece:
-
-1. Conecta na ESP32-CAM e abre a janela **Monitoramento de Estoque**.
-2. A cada `INTERVALO_PROCESSAMENTO` segundos (padrão `0.05s`, ~12 detecções/segundo neste hardware), roda o YOLO no frame atual.
-3. Compara com o frame anterior e gera eventos: `inserido`, `retirado`, `interacao_mao`.
-4. Envia cada evento via `POST` para `API_ENDPOINT`.
-
-Para encerrar: pressione `Q` com a janela em foco.
-
-Se o backend em `API_ENDPOINT` não estiver ativo, o sistema continua rodando normalmente e apenas registra `[API_ERRO]` no console.
+Abre uma janela OpenCV local, roda o YOLO a cada `INTERVALO_PROCESSAMENTO` segundos e imprime os eventos no console (não passa pela API/WebSocket). Para encerrar, pressione `Q` com a janela em foco.
 
 ---
 
 ## 7. Rodar os testes automatizados
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest projeto\tests -v
+$env:PYTHONPATH = "$PWD\backend\app"
+.\.venv\Scripts\python.exe -m pytest backend\app\tests -v
 ```
 
-Os testes atuais cobrem o módulo de captura de frames ([projeto/tests/test_capturar_frames.py](projeto/tests/test_capturar_frames.py)) com casos unitários e mockados, sem depender da câmera real.
+Cobre a API FastAPI (`test_api.py`, via `TestClient`, incluindo WebSocket) e a captura de frames (`test_capturar_frames.py`), sem depender da câmera real.
 
 ---
 
@@ -151,20 +122,28 @@ Os testes atuais cobrem o módulo de captura de frames ([projeto/tests/test_capt
 
 ```text
 G:\000. TCC\
-├── .venv/                  # ambiente virtual com todas as dependências
-├── projeto/
-│   ├── main.py             # inferência + eventos + API
-│   ├── capturar_frames.py  # captura automática de frames
-│   ├── controllers/        # api_controller.py
-│   ├── services/           # camera, vision, event, annotation_converter, training
-│   ├── utils/config.py     # configuração central
-│   └── tests/              # testes automatizados
-├── dataset_fotos/          # imagens capturadas da ESP32-CAM
-├── dataset_labels/         # JSONs do LabelMe
-├── labels_yolo/            # .txt convertidos (gerado automaticamente)
-├── dataset/                # dataset final YOLO (gerado automaticamente)
-├── treinamentos/           # pesos treinados (best.pt)
-├── yolo/                   # dataset externo de validação (Roboflow, 10 classes)
+├── .venv/                       # ambiente virtual com todas as dependências
+├── backend/app/
+│   ├── main.py                  # entrypoint FastAPI (API + serve o frontend)
+│   ├── cli_monitor.py           # monitoramento via console (OpenCV), sem API
+│   ├── capturar_frames.py       # captura automática de frames
+│   ├── worker.py                # loop de monitoramento em background (usado pela API)
+│   ├── core/{config,state}.py   # configuração central (pydantic-settings) + estado em memória
+│   ├── routers/                 # eventos, stream, treino, dataset, modelos
+│   ├── controllers/             # api_controller.py
+│   ├── services/                # camera, vision, event, annotation_converter, training
+│   └── tests/                   # testes automatizados
+├── frontend/                    # HTML/CSS/JS puro, servido pelo FastAPI
+├── models/pretrained/            # os 4 modelos-base (yolov8n, yolo12n, yolo26s, yolo26m)
+├── experiments/treinamentos/     # pesos treinados (best.pt) e métricas de cada experimento
+├── data/
+│   ├── raw_frames/               # imagens capturadas da ESP32-CAM
+│   ├── labelme_annotations/      # JSONs do LabelMe
+│   ├── yolo_labels/              # .txt convertidos (gerado automaticamente)
+│   ├── dataset/                  # dataset final YOLO (gerado automaticamente)
+│   └── external_validation/      # dataset externo de validação (Roboflow, 10 classes; nao versionado)
+├── scripts/experimento_yolo26.py # comparação manual entre os 4 modelos
+├── docs/                         # este manual + manual de reconstrução
 └── requirements.txt
 ```
 
@@ -176,6 +155,7 @@ G:\000. TCC\
 |---|---|---|
 | `ImportError: DLL load failed while importing QtCore: Não foi possível encontrar o procedimento especificado` ao rodar `python -m labelme` | `PySide6` na versão mais recente (ex.: `6.11.2`) é incompatível com este build do Windows | Instalar `PySide6==6.8.3` (`pip install "PySide6==6.8.3"`), já fixado em `requirements.txt` |
 | `torch.cuda.is_available()` retorna `False` | PyTorch instalado é CPU-only | Reinstalar com `--index-url https://download.pytorch.org/whl/cu121` se houver GPU NVIDIA |
-| `ignoring corrupt image/label: labels mix segment and detection rows` durante treino no dataset `yolo/` | Dataset externo mistura anotações de segmentação e detecção | Esperado; o YOLO usa apenas as caixas. Não usar esse dataset como final do TCC |
-| `FileNotFoundError` ao treinar dataset próprio | `dataset_labels/` vazio | Anote as imagens no LabelMe antes de treinar (seção 4) |
+| `ignoring corrupt image/label: labels mix segment and detection rows` durante treino no dataset externo | Dataset externo mistura anotações de segmentação e detecção | Esperado; o YOLO usa apenas as caixas. Não usar esse dataset como final do TCC |
+| `FileNotFoundError` ao treinar dataset próprio | `data/labelme_annotations/` vazio | Anote as imagens no LabelMe antes de treinar (seção 4) |
 | Modelo não detecta nada | Treino de teste com `fraction` baixo ou poucas épocas | Treinar com `fraction=1.0` e mais épocas |
+| `/api/stream` fica sem exibir vídeo | ESP32-CAM inacessível; `camera_service` tenta reconectar indefinidamente sem lançar erro | Verificar rede/IP da câmera; a página não trava, só fica sem imagem |

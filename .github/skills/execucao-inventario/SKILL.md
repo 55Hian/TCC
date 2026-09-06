@@ -1,6 +1,6 @@
 ---
 name: execucao-inventario
-description: "Reconstrua, valide e execute o sistema de controle autonomo de inventario com ESP32-CAM, YOLOv8, LabelMe, pandas e API HTTP. Use quando o usuario pedir para executar o sistema descrito no MANUAL_RECONSTRUCAO.md, reconstruir o projeto ou validar o pipeline de visao."
+description: "Reconstrua, valide e execute o sistema de controle autonomo de inventario com ESP32-CAM, YOLOv8, LabelMe, pandas e FastAPI. Use quando o usuario pedir para executar o sistema descrito no docs/MANUAL_DE_USO.md, reconstruir o projeto ou validar o pipeline de visao."
 argument-hint: "Informe a etapa desejada: reconstruir, validar dataset, treinar ou executar inferencia"
 user-invocable: true
 disable-model-invocation: false
@@ -10,17 +10,17 @@ disable-model-invocation: false
 
 ## Objetivo
 
-Reconstruir e validar o projeto descrito em `MANUAL_RECONSTRUCAO.md`, mantendo a separacao entre camera, visao, eventos, API e treinamento.
+Reconstruir e validar o projeto descrito em `docs/MANUAL_DE_USO.md` (estrutura atual, backend FastAPI + frontend) e em `docs/MANUAL_RECONSTRUCAO.md` (historico), mantendo a separacao entre camera, visao, eventos, API e treinamento.
 
 ## Procedimento
 
-1. Leia `MANUAL_RECONSTRUCAO.md` e confirme a raiz do workspace.
-2. Verifique se `projeto/`, `requirements.txt`, dataset, pesos YOLO e interpretador Python existem.
-3. Se o codigo nao existir, crie `projeto/{controllers,services,utils}` e os modulos descritos no manual. Preserve datasets e alteracoes existentes.
+1. Leia `docs/MANUAL_DE_USO.md` e confirme a raiz do workspace.
+2. Verifique se `backend/app/`, `requirements.txt`, `data/`, `models/pretrained/` (os 4 `.pt`) e o `.venv` existem.
+3. Se o codigo nao existir, crie `backend/app/{controllers,services,core,routers}` e os modulos descritos no manual. Preserve datasets e alteracoes existentes.
 4. Execute primeiro a validacao barata: compile os arquivos Python e teste as funcoes puras de conversao LabelMe e geracao de eventos com DataFrames.
-5. Para treinamento proprio, confirme JSONs em `dataset_labels/` e imagens correspondentes em `dataset_fotos/`; converta JSON para YOLO, monte `dataset/` e gere `data.yaml` antes de iniciar o Ultralytics.
-6. Para dataset externo, ative `USE_EXTERNAL_VALIDATION_DATASET` somente de forma temporaria e confirme que o YAML usa classes compativeis. Nunca trate um dataset externo com classes diferentes como dataset final sem revisao.
-7. Para inferencia, confirme `MODEL_PATH`, `ESP32_STREAM_URL` e `API_ENDPOINT`; so entao inicie o loop camera -> YOLO -> eventos -> API.
+5. Para treinamento proprio, confirme JSONs em `data/labelme_annotations/` e imagens correspondentes em `data/raw_frames/`; converta JSON para YOLO, monte `data/dataset/` e gere `data.yaml` antes de iniciar o Ultralytics.
+6. Para dataset externo, ative `USE_EXTERNAL_VALIDATION_DATASET` somente de forma temporaria e confirme que o YAML (`data/external_validation/data.yaml`) usa classes compativeis. Nunca trate um dataset externo com classes diferentes como dataset final sem revisao.
+7. Para inferencia, confirme `MODEL_PATH`, `ESP32_STREAM_URL` e `API_ENDPOINT` em `backend/app/core/config.py`; so entao inicie o loop camera -> YOLO -> eventos -> API (via `uvicorn main:app --app-dir backend/app` ou `backend/app/cli_monitor.py`).
 8. Nao abra camera, janela OpenCV, API ou treinamento durante testes unitarios. Esses passos exigem hardware, pesos e dependencias instalados.
 
 ## Decisoes e bloqueios
