@@ -1,0 +1,4 @@
+path: G:/000. TCC/dataset
+train: images/train
+val: images/val
+names: ['creme_leite', 'gelatina', 'cha', 'mao']

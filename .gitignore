@@ -1,0 +1,17 @@
+# Ambiente Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Dataset externo de terceiros (Roboflow, ~830MB, re-obtenível, licença própria) —
+# não deve ser versionado nem, futuramente, enviado ao GitHub.
+yolo/
+
+# NOTA: runs/ e treinamentos/ (pesos e resultados de treino) são versionados
+# de propósito no commit de segurança inicial (Fase 0), antes da decisão de
+# limpeza de duplicados. Regras de ignore para eles serão revisadas na Fase 6.
