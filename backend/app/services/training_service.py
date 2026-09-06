@@ -15,11 +15,11 @@ def _resolve_device():
     return "cpu", "CPU"
 
 
-def _treinar_com_dataset_externo(epochs=50, imgsz=640, fraction=1.0):
+def _treinar_com_dataset_externo(base_model, epochs=50, imgsz=640, fraction=1.0):
     print(f"[TREINO] Dataset externo: {settings.EXTERNAL_VALIDATION_DATASET_YAML}")
     dispositivo, nome_dispositivo = _resolve_device()
-    print(f"[TREINO] Iniciando {settings.BASE_MODEL} em: {nome_dispositivo}")
-    modelo = YOLO(settings.BASE_MODEL)
+    print(f"[TREINO] Iniciando {base_model} em: {nome_dispositivo}")
+    modelo = YOLO(base_model)
     modelo.train(
         data=settings.EXTERNAL_VALIDATION_DATASET_YAML,
         epochs=epochs,
@@ -36,6 +36,7 @@ def rodar_pipeline_treinamento(
     pasta_json=None,
     pasta_yolo=None,
     pasta_dataset=None,
+    base_model=None,
     epochs=50,
     imgsz=640,
     fraction=1.0,
@@ -44,9 +45,10 @@ def rodar_pipeline_treinamento(
     pasta_json = pasta_json or settings.LABELME_ANNOTATIONS_DIR
     pasta_yolo = pasta_yolo or settings.YOLO_LABELS_DIR
     pasta_dataset = pasta_dataset or settings.DATASET_DIR
+    base_model = base_model or settings.BASE_MODEL
 
     if settings.USE_EXTERNAL_VALIDATION_DATASET:
-        _treinar_com_dataset_externo(epochs=epochs, imgsz=imgsz, fraction=fraction)
+        _treinar_com_dataset_externo(base_model, epochs=epochs, imgsz=imgsz, fraction=fraction)
         return
 
     os.makedirs(pasta_json, exist_ok=True)
@@ -100,8 +102,8 @@ def rodar_pipeline_treinamento(
         arquivo.write(f"names: {settings.CLASSES}\n")
 
     dispositivo, nome_dispositivo = _resolve_device()
-    print(f"[TREINO] Iniciando {settings.BASE_MODEL} em: {nome_dispositivo}")
-    modelo = YOLO(settings.BASE_MODEL)
+    print(f"[TREINO] Iniciando {base_model} em: {nome_dispositivo}")
+    modelo = YOLO(base_model)
     modelo.train(
         data=caminho_yaml,
         epochs=epochs,
