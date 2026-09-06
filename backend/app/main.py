@@ -13,7 +13,7 @@ from services.camera_service import gerador_de_frames
 from services.event_service import gerar_eventos
 from services.training_service import rodar_pipeline_treinamento
 from services.vision_service import VisionService
-from utils.config import ESP32_STREAM_URL, INTERVALO_PROCESSAMENTO
+from core.config import settings
 
 
 def main():
@@ -28,10 +28,10 @@ def main():
         return
 
     ultimo_processamento = time.time()
-    for frame in gerador_de_frames(ESP32_STREAM_URL):
+    for frame in gerador_de_frames(settings.ESP32_STREAM_URL):
         cv2.imshow("Monitoramento de Estoque", frame)
         tempo_atual = time.time()
-        if tempo_atual - ultimo_processamento >= INTERVALO_PROCESSAMENTO:
+        if tempo_atual - ultimo_processamento >= settings.INTERVALO_PROCESSAMENTO:
             df_atual = ia_visao.processar_frame(frame)
             classes_detectadas = df_atual["classe"].tolist() if not df_atual.empty else []
             # print(f"[VISAO] Deteccoes: {len(df_atual)} | Classes: {classes_detectadas}")

@@ -2,18 +2,13 @@ import numpy as np
 import pandas as pd
 from ultralytics import YOLO
 
-from utils.config import (
-    CLASSES,
-    EXTERNAL_CLASSES,
-    MODEL_PATH,
-    USE_EXTERNAL_VALIDATION_DATASET,
-)
+from core.config import settings
 
 
 class VisionService:
-    def __init__(self, caminho_pesos=MODEL_PATH):
-        self.modelo = YOLO(caminho_pesos)
-        self.classes = EXTERNAL_CLASSES if USE_EXTERNAL_VALIDATION_DATASET else CLASSES
+    def __init__(self, caminho_pesos=None):
+        self.modelo = YOLO(caminho_pesos or settings.MODEL_PATH)
+        self.classes = settings.EXTERNAL_CLASSES if settings.USE_EXTERNAL_VALIDATION_DATASET else settings.CLASSES
         # primeira chamada ao modelo tem custo alto (JIT/threads); absorve isso aqui, fora do loop de captura.
         self.modelo(np.zeros((480, 640, 3), dtype=np.uint8), verbose=False)
 

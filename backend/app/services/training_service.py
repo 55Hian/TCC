@@ -6,15 +6,7 @@ import torch
 from ultralytics import YOLO
 
 from services.annotation_converter import converter_labelme_para_yolo
-from utils.config import (
-    BASE_MODEL,
-    CLASSES,
-    DATASET_DIR,
-    EXTERNAL_VALIDATION_DATASET_YAML,
-    TRAINING_NAME,
-    TRAINING_PROJECT,
-    USE_EXTERNAL_VALIDATION_DATASET,
-)
+from core.config import settings
 
 
 def _resolve_device():
@@ -24,31 +16,36 @@ def _resolve_device():
 
 
 def _treinar_com_dataset_externo(epochs=50, imgsz=640, fraction=1.0):
-    print(f"[TREINO] Dataset externo: {EXTERNAL_VALIDATION_DATASET_YAML}")
+    print(f"[TREINO] Dataset externo: {settings.EXTERNAL_VALIDATION_DATASET_YAML}")
     dispositivo, nome_dispositivo = _resolve_device()
-    print(f"[TREINO] Iniciando {BASE_MODEL} em: {nome_dispositivo}")
-    modelo = YOLO(BASE_MODEL)
+    print(f"[TREINO] Iniciando {settings.BASE_MODEL} em: {nome_dispositivo}")
+    modelo = YOLO(settings.BASE_MODEL)
     modelo.train(
-        data=EXTERNAL_VALIDATION_DATASET_YAML,
+        data=settings.EXTERNAL_VALIDATION_DATASET_YAML,
         epochs=epochs,
         imgsz=imgsz,
         fraction=fraction,
-        project=os.path.abspath(TRAINING_PROJECT),
-        name=TRAINING_NAME,
+        project=os.path.abspath(settings.TRAINING_PROJECT),
+        name=settings.TRAINING_NAME,
         device=dispositivo,
     )
 
 
 def rodar_pipeline_treinamento(
-    pasta_fotos="dataset_fotos",
-    pasta_json="dataset_labels",
-    pasta_yolo="labels_yolo",
-    pasta_dataset=DATASET_DIR,
+    pasta_fotos=None,
+    pasta_json=None,
+    pasta_yolo=None,
+    pasta_dataset=None,
     epochs=50,
     imgsz=640,
     fraction=1.0,
 ):
-    if USE_EXTERNAL_VALIDATION_DATASET:
+    pasta_fotos = pasta_fotos or settings.RAW_FRAMES_DIR
+    pasta_json = pasta_json or settings.LABELME_ANNOTATIONS_DIR
+    pasta_yolo = pasta_yolo or settings.YOLO_LABELS_DIR
+    pasta_dataset = pasta_dataset or settings.DATASET_DIR
+
+    if settings.USE_EXTERNAL_VALIDATION_DATASET:
         _treinar_com_dataset_externo(epochs=epochs, imgsz=imgsz, fraction=fraction)
         return
 
@@ -56,10 +53,10 @@ def rodar_pipeline_treinamento(
     os.makedirs(pasta_yolo, exist_ok=True)
     if not os.listdir(pasta_json):
         raise FileNotFoundError(
-            "Nenhum JSON do LabelMe foi encontrado em 'dataset_labels'."
+            f"Nenhum JSON do LabelMe foi encontrado em '{pasta_json}'."
         )
 
-    converter_labelme_para_yolo(pasta_json, pasta_yolo, CLASSES)
+    converter_labelme_para_yolo(pasta_json, pasta_yolo, settings.CLASSES)
     for split in ("train", "val"):
         os.makedirs(os.path.join(pasta_dataset, "images", split), exist_ok=True)
         os.makedirs(os.path.join(pasta_dataset, "labels", split), exist_ok=True)
@@ -76,7 +73,7 @@ def rodar_pipeline_treinamento(
     ]
     if not validos:
         raise FileNotFoundError(
-            "Nenhuma imagem convertida foi encontrada em 'labels_yolo'."
+            f"Nenhuma imagem convertida foi encontrada em '{pasta_yolo}'."
         )
 
     random.seed(42)
@@ -100,16 +97,16 @@ def rodar_pipeline_treinamento(
         arquivo.write(f"path: {os.path.abspath(pasta_dataset).replace(chr(92), '/') }\n")
         arquivo.write("train: images/train\n")
         arquivo.write("val: images/val\n")
-        arquivo.write(f"names: {CLASSES}\n")
+        arquivo.write(f"names: {settings.CLASSES}\n")
 
     dispositivo, nome_dispositivo = _resolve_device()
-    print(f"[TREINO] Iniciando {BASE_MODEL} em: {nome_dispositivo}")
-    modelo = YOLO(BASE_MODEL)
+    print(f"[TREINO] Iniciando {settings.BASE_MODEL} em: {nome_dispositivo}")
+    modelo = YOLO(settings.BASE_MODEL)
     modelo.train(
         data=caminho_yaml,
         epochs=epochs,
         imgsz=imgsz,
-        project=os.path.abspath(TRAINING_PROJECT),
-        name=TRAINING_NAME,
+        project=os.path.abspath(settings.TRAINING_PROJECT),
+        name=settings.TRAINING_NAME,
         device=dispositivo,
     )

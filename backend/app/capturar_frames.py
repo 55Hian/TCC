@@ -5,7 +5,7 @@ import time
 import cv2
 
 from services.camera_service import gerador_de_frames
-from utils.config import ESP32_STREAM_URL
+from core.config import settings
 
 
 def deve_capturar(ultimo_salvamento, agora, intervalo):
@@ -18,7 +18,7 @@ def gerar_nome_arquivo(contador):
 
 
 def capturar_frames(
-    pasta_saida="dataset_fotos",
+    pasta_saida=None,
     intervalo=2.0,
     max_frames=0,
     mostrar_janela=True,
@@ -29,10 +29,11 @@ def capturar_frames(
     `max_frames=0` significa captura ilimitada (encerra com Q ou Ctrl+C).
     `fonte_frames` permite injetar um generator alternativo (usado em testes).
     """
+    pasta_saida = pasta_saida or settings.RAW_FRAMES_DIR
     os.makedirs(pasta_saida, exist_ok=True)
     ultimo_salvamento = 0.0
     contador = 0
-    gerador = fonte_frames if fonte_frames is not None else gerador_de_frames(ESP32_STREAM_URL)
+    gerador = fonte_frames if fonte_frames is not None else gerador_de_frames(settings.ESP32_STREAM_URL)
 
     try:
         for frame in gerador:
@@ -71,7 +72,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="Captura automatica de frames da ESP32-CAM para anotacao."
     )
-    parser.add_argument("--saida", default="dataset_fotos", help="Pasta para salvar os JPEGs.")
+    parser.add_argument("--saida", default=settings.RAW_FRAMES_DIR, help="Pasta para salvar os JPEGs.")
     parser.add_argument(
         "--intervalo",
         type=float,

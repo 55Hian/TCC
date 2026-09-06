@@ -1,11 +1,11 @@
 import json
 import os
 
-from utils.config import CLASSES
+from core.config import settings
 
 
 def labelme_json_to_yolo(json_path, output_dir, classes=None):
-    classes = classes or CLASSES
+    classes = classes or settings.CLASSES
     with open(json_path, "r", encoding="utf-8") as handle:
         data = json.load(handle)
 
@@ -41,7 +41,7 @@ def labelme_json_to_yolo(json_path, output_dir, classes=None):
 
 
 def converter_labelme_para_yolo(json_dir, output_dir, classes=None):
-    classes = classes or CLASSES
+    classes = classes or settings.CLASSES
     os.makedirs(output_dir, exist_ok=True)
     arquivos = [nome for nome in os.listdir(json_dir) if nome.lower().endswith(".json")]
     if not arquivos:

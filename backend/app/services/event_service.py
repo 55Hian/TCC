@@ -1,4 +1,4 @@
-from utils.config import IOU_THRESHOLD
+from core.config import settings
 
 
 def calcular_area_intersecao(box_a, box_b):
@@ -22,7 +22,7 @@ def gerar_eventos(df_atual):
 
     for _, mao in df_atual[df_atual["classe"] == "mao"].iterrows():
         for _, produto in df_atual[df_atual["classe"] != "mao"].iterrows():
-            if calcular_area_intersecao(mao.to_dict(), produto.to_dict()) >= IOU_THRESHOLD:
+            if calcular_area_intersecao(mao.to_dict(), produto.to_dict()) >= settings.IOU_THRESHOLD:
                 eventos.append({"tipo": "interacao_mao", "produto": produto["classe"], "quantidade": 1})
                 break
 
