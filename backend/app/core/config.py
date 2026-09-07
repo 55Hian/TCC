@@ -45,7 +45,7 @@ class Settings(BaseSettings):
 
     # Arquitetura base usada para treinar. Troque aqui para alternar entre os 4 modelos em models/pretrained/.
     PRETRAINED_MODELS_DIR: str = str(BASE_DIR / "models" / "pretrained")
-    BASE_MODEL: str = str(BASE_DIR / "models" / "pretrained" / "yolo26m.pt")
+    BASE_MODEL: str = str(BASE_DIR / "models" / "pretrained" / "yolo12n.pt")
 
     USE_EXTERNAL_VALIDATION_DATASET: bool = False
     EXTERNAL_VALIDATION_DATASET_DIR: str = str(BASE_DIR / "data" / "external_validation")
