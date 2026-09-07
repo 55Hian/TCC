@@ -1,0 +1,136 @@
+{
+  "version": "7.4.1",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "gelatina",
+      "points": [
+        [
+          83.0,
+          128.0
+        ],
+        [
+          216.0,
+          227.0
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "mask",
+      "flags": {},
+      "mask": "iVBORw0KGgoAAAANSUhEUgAAAIYAAABkCAAAAABmnhfEAAABdUlEQVR4nOXaUavCMBQD4KT//z/nPlwRdJ2rtjsJNC8iys5HWjeQEkPh6Scau8DP1//2S1MuLkb8iOK9ilEgXYpXS4NTAY4xeK/iOaB5FXiMuFqUojRzGY/42+AVg9ioDfAzg9iqDTCDgU8MZjAKw3MGsV0bCGGwRawJMtpAiygD0W2wWKHoNjIYzGAggsFqhJLbyGCw2qDgNpjBKI8yGOgxCEf8bajHIDZtI4OhHoO7tpHBUI/BXdvoMYjqjP5nXpRABsunq8MgfAlclPKowyCMSVsUZjAM0ZHhLSNsb9AwWrFtZDBomKwjw54WUQaC2qAbAVsbOjACykDQ3jBEb+9bxJogZVGIfdtQBuOQnRk6Mtac95xNW3TudDJt1fnXL6L+3lDIFlXpSJ0x/H20/xeZIc/7hjIYqHJ057w+YJnBwP2Qful0Hem+fLTJsFvpPGs/No5YHk2MIrSKNMNYBzrddT9flCsVK8rmNOKuX8Txqhc3gT9S/zLBgWOLLgAAAABJRU5ErkJggg=="
+    },
+    {
+      "label": "creme_leite",
+      "points": [
+        [
+          395.0,
+          127.0
+        ],
+        [
+          512.0,
+          240.0
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "mask",
+      "flags": {},
+      "mask": "iVBORw0KGgoAAAANSUhEUgAAAHYAAAByCAAAAACjXXrbAAABNklEQVR4nO3b7Y6CMBSE4ZkT7/+Wx4Dysa7ZCNIz2fa8P9Qg4SltJJoI8SPiXDq4P69AP0oA9U5qqu4TAoboYWFiGYalhetsUWxCMShLD5ta5HJLxWZOMj1sbpHsPSs2oRiSpYdNLrLBR8XmTTI9bHaRLs4V2z6NOMn0sOlFPjlVbEKRgfyu2M4nmR42vzCYKLb3taWHNRQOFMX2vbb0sI7CoqLYnieZHtZSFNu+SDDeVGyvk6xa254/QPSwKLZ5MQ6roc4WxaYUw7Ca2KP/Gv/nkywPC4fLD3bQtT9GBeD2NznPRIMvINw9aTm+tnNct12WsD9bgdNNDk9vem++52HZNg9hHeJjly9GdNuP4eXVuoWa3OUNLQ/a7sY4OgKeG+35Y6rZ5UKmq5Q8LDwX+rVtlV/W+w51RSvkbFknygAAAABJRU5ErkJggg=="
+    },
+    {
+      "label": "creme_leite",
+      "points": [
+        [
+          407.0,
+          258.0
+        ],
+        [
+          541.0,
+          372.0
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "mask",
+      "flags": {},
+      "mask": "iVBORw0KGgoAAAANSUhEUgAAAIcAAABzCAAAAACXj07ZAAABQ0lEQVR4nO3awW7CMBCE4dl5/3feqtA2doIihFT7P8x3QDkAHiaLQYTSRQ3HrUVqXnet4VV6YwwNS3tfCo1B9uY4uBiFeNk74h7mvIjBe+dDv8tnPljnBTen2qxg+1gJwWIw5byIwWK8YSwGi8FisBgsBovBYrAYG4jFYDFYDBaDxWAxWAwWg8XYyCwG7w6g58+GhBzfkuOQOb3KfMzSB28fK0gOFSRHQ3IIkqMgOZQcZ153qfhW5mOWPmbpY5Y+RpU+TjIfs/QxSx+z9DFLH7P0MUsfs/QxSx/IPgrURwvAO/+/PgCdF4KG5FByjDp9nGQ+BrnuQbw+14zP237cAvpg5GhIDh05CF/ILEYQP257e5J6cbRSf7h6PR97eVh/9jL6n1qoxzNX/x1tyvHKzRLHWC7YP/qdO62aztM6PyN2RPwCifcj3mwQvpkAAAAASUVORK5CYII="
+    },
+    {
+      "label": "creme_leite",
+      "points": [
+        [
+          383.0,
+          418.0
+        ],
+        [
+          535.0,
+          479.0
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "mask",
+      "flags": {},
+      "mask": "iVBORw0KGgoAAAANSUhEUgAAAJkAAAA+CAAAAAAdLuYwAAAAq0lEQVR4nO3awQrCQBRD0ST//89PLA7FjZBKSxhyFi5tvNNFoRKXETeYr6+/5RJ/T2PWLpzThFRCKqUdZnAzxi5buszXZls0Y+yyjy7ztdkezXh86ny8DSOkUu7z2SCUkEoIxNhlhy7ztZmvzXZpxthlb13mazNfm5nYZlf0PvO1mYttdkHvM1+b2ZjcbJBJSKW4N/xLT3Ov00zFtH/fYFmrCMzPhfPsDxi8AOduCoEOm/DUAAAAAElFTkSuQmCC"
+    },
+    {
+      "label": "creme_leite",
+      "points": [
+        [
+          159.0,
+          331.0
+        ],
+        [
+          308.0,
+          446.0
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "mask",
+      "flags": {},
+      "mask": "iVBORw0KGgoAAAANSUhEUgAAAJYAAAB0CAAAAABC5pS3AAABn0lEQVR4nO2b0Y6CMBREZ272/395NqsL60ZBUWlPDeeBCFF6MvfaFJJaC/h0jPrgLdezr8u94ZdtWxk+q7Wzol+32sPwzVrv0txZ61lHt7PaYthJ654jQeuGoElWmsVKLMzU0qJWzxpOjJMWgdIgWhaAEpLSGFoWgRKS0hBaFoISDlv6Eo5cpwWpoZlFDFDrB6iWV866EWZaZmppiHnLImDoP9FMLR1a2yhcx584euth8i8tUA11FPGj0rJAlEZ48ulK/l7QF7KGIqVF1TJSy7rSYrWWSGmdCVNLF1qwGoqUVphaF27oCcKCUUJS4mpZGMJPi0cJq2VxMD4tEmFq/VKs1prgpiXgkquEpJCtJVhahveWRXzIKCEpkTBTa+bQGniCEFMrSK0IqTVzaH1CWhGHzJ+q2zaxVarf9rV7vRVoy0c0SkhKYK2ImVbELGJYYl45a06WRTqaZd2i/4Y7LSqYqdVDLdtGNlOrkV9eHshCat3GFzfffuM0bxsTtfzQt9JwYWM/ZUUpYrb+4D04q0NdLV9aT+SeHKaBby+ovgFi9TncC44geAAAAABJRU5ErkJggg=="
+    },
+    {
+      "label": "cha",
+      "points": [
+        [
+          206.0,
+          190.0
+        ],
+        [
+          336.0,
+          301.0
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "mask",
+      "flags": {},
+      "mask": "iVBORw0KGgoAAAANSUhEUgAAAIMAAABwCAAAAAAY8JwNAAABb0lEQVR4nO3awW6EMBADUDv//8+utKgtFYGFTTJjNfFhDxyYt57ACaIWHq4I48LbF8dxPjB01zQZOoHYi9DAGWJ4qBlsuIVhDOHSEm2oUZIM2DMKskIDAy4MRHQSe+CpgeEW0/MQFxr3QANDaFg1MBZRNWA+AysGpkjWLio9ENF5TVy7wKuIkv5UIH8XNDDgj4EGhrR4GWhgwMQG/ho4cw+wMtDAgHwDDQyY3cDd78w9lPwaYNODgYEGhuyYGGhgSM8ybCn5xwFrF1tK/iq0drFl9eDSgwwMQJGBYejXNvdisQvkF5HegwwM8DEocb6+e5DDLmRggINBBgZMbNDeoESI1S5kYEAGQn678DDIwAAHg6KHy6cHvr3wv3sQTgyKtxx7kIEB4YjaeVDM6J8x1TOp2CpOngtFGi5eBzT41l1RZbz7sxw1WI9n0MDQHaPWe7IroeV2NDC03KCv4aMbaeyB52PCsOefBoaLGYfX7xcobzTH6HoP8AAAAABJRU5ErkJggg=="
+    },
+    {
+      "label": "cha",
+      "points": [
+        [
+          0.0,
+          290.0
+        ],
+        [
+          131.0,
+          413.0
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "mask",
+      "flags": {},
+      "mask": "iVBORw0KGgoAAAANSUhEUgAAAIQAAAB8CAAAAACN7kcPAAAB5ElEQVR4nO3b226DMBAE0Jko///LUzUUpQ0uN++uR4J9Igji47WNbQmAVxAjgx8EDUIssyAHRDWEa71BDogqyTaigLIXkSo5hMiCHEZkUE4iYiEdiDhIJyJGEoHohkQhuiCRiNOScMQZSQ7ioCQRsV+SjcAexyPdgO16FiCwuYwuQYAOCKw3SRECq8koQ4AOCFgg6IAALZqDDgjQomOyybja6JiCFpmgAwK06BN0QIAWo4MOCNDiOUEHBGjxxKQDArSYO+iAAC1mUTogwAuvJ1qpGI0AHRCwQNABATogYIGgAwI3Yo47E3PcmZjjzsRP6M7EFLr7xBS6R8c7ho8OOSBggJADAgYIOSBggJABQhiP0Hxw9T4hBwQMEDJA6NfxpZtDDggYIOSAgAFCf38+32c4gjOVzEnBykI/X/96Dv+aAFOfUPG7+4viHvM5jTO8m4IOiDJII+XLclmPWD6shPL4HqItR1o+WnX8vzCWGVbmDq3dFhsb9WVw07RrtK8A5iL2TeVKNexdTyj3m5/EqxehkJWVchJyom6EzqVE0QmmAwLH71TCalsIC5bdr7x9hzrvD0FAAdf178DUf5XFXpQ1/yVUZUJne2n0Io7Nsxu6lJUkjxnSVtU8YMjc6sx/vd1TvgAs7FDWZFRajwAAAABJRU5ErkJggg=="
+    }
+  ],
+  "imagePath": "../raw_frames/frame_20260905_154101_0098.jpg",
+  "imageData": null,
+  "imageHeight": 480,
+  "imageWidth": 640
+}

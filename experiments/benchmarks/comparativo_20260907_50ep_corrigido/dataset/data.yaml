@@ -1,0 +1,8 @@
+names:
+- creme_leite
+- gelatina
+- cha
+- mao
+path: G:/000. TCC/experiments/benchmarks/comparativo_20260907_50ep_corrigido/dataset
+train: images/train
+val: images/val

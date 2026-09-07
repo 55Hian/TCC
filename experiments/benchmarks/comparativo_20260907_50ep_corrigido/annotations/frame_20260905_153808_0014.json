@@ -1,0 +1,192 @@
+{
+  "version": "7.4.1",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "cha",
+      "points": [
+        [
+          105.29411764705885,
+          242.78074866310163
+        ],
+        [
+          192.99465240641712,
+          242.24598930481287
+        ],
+        [
+          205.82887700534764,
+          185.02673796791444
+        ],
+        [
+          185.50802139037438,
+          142.78074866310163
+        ],
+        [
+          90.3208556149733,
+          140.6417112299466
+        ],
+        [
+          72.13903743315508,
+          202.6737967914439
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "polygon",
+      "flags": {},
+      "mask": null
+    },
+    {
+      "label": "cha",
+      "points": [
+        [
+          45.93582887700536,
+          344.385026737968
+        ],
+        [
+          132.56684491978615,
+          360.42780748663114
+        ],
+        [
+          162.51336898395726,
+          289.83957219251346
+        ],
+        [
+          127.7540106951872,
+          248.12834224598933
+        ],
+        [
+          37.379679144385065,
+          237.96791443850267
+        ],
+        [
+          0.48128342245991007,
+          303.7433155080214
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "polygon",
+      "flags": {},
+      "mask": null
+    },
+    {
+      "label": "gelatina",
+      "points": [
+        [
+          224.01069518716582,
+          306.95187165775405
+        ],
+        [
+          338.4491978609626,
+          314.4385026737968
+        ],
+        [
+          342.192513368984,
+          337.43315508021396
+        ],
+        [
+          324.5454545454547,
+          454.54545454545456
+        ],
+        [
+          197.2727272727273,
+          445.4545454545456
+        ],
+        [
+          189.78609625668452,
+          429.4117647058825
+        ],
+        [
+          215.98930481283423,
+          307.4866310160428
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "polygon",
+      "flags": {},
+      "mask": null
+    },
+    {
+      "label": "gelatina",
+      "points": [
+        [
+          313.0,
+          305.0
+        ],
+        [
+          529.0,
+          447.0
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "mask",
+      "flags": {},
+      "mask": "iVBORw0KGgoAAAANSUhEUgAAANkAAACPCAAAAABSAiFAAAACKUlEQVR4nO2d23LiMBAFzznl///l2QrmstlyYlOJENPrfuDqkmhmRjICG2sg/v7pkmta55ObLqzZT0yjTtjUmK0UMGYrxyLX0UyH0qGnmTyzzgZW8KF6axqzA+/doq7UzvOdY0Y1M9Zsj7Z1Vv/vqO/GZt/rtc3G3aA1Nivs2Gis2Y5demdjIc124I76bi72tRwhG401E9fMWDNhzQprZqyZjDUrrNkWp1k/IioRlYiAsWba+BqU8Plse1oLSEwGZuOGGstMxpqJa2asmYw1u3Oa9SOiFlpEJaISUdMxohJRiahE1EKLqEQ8CmvmkWZTlkE+906MmS5qg8wGHn11FGQ2ipuNhTX74DTrhbkxM9ZMxpqJa2asmbBmhTUz1kynWT8iKhGViEpEJaISUYmoRFQiKhGViEpEJdTFb4X6hYWw2VhYM51m/Yhw1HpCA1NH/QLG7ArVrLBm4taZsDEroFmtF0Azf7oa0/hUFhEppFldr3F1VqKaCXwkQmHNRDdzo1afS8dFOMqPS+Q+SEQlohIx166EHBuxMcObLaJRazGc81lD3KrZI9yyEXn8WXX9X6Y36N7U+cyaQtFnao9uv2aFMKKyDG39ESb/OxEM2vvRpZ+PTHllirzwjPtWZfp58H+9fV9OU/nMny3+mNf0VbBsrFvzNW82veyu/nXz/goeP7u5P1ZHX2Vdt6v3WrE4iDeq1bfc+3LzHqyLv3rcf4dfiP4Ozwx4fwBr30spCJPMdQAAAABJRU5ErkJggg=="
+    },
+    {
+      "label": "mao",
+      "points": [
+        [
+          536.3101604278075,
+          0.5347593582887776
+        ],
+        [
+          551.2834224598931,
+          57.21925133689841
+        ],
+        [
+          605.8288770053477,
+          133.68983957219254
+        ],
+        [
+          640.0,
+          178.9163258886442
+        ],
+        [
+          640.0,
+          447.0588235294119
+        ],
+        [
+          576.9518716577542,
+          340.6417112299466
+        ],
+        [
+          605.2941176470589,
+          466.3101604278075
+        ],
+        [
+          586.5775401069519,
+          476.47058823529414
+        ],
+        [
+          489.2513368983958,
+          302.13903743315507
+        ],
+        [
+          486.0427807486631,
+          166.3101604278075
+        ],
+        [
+          425.08021390374336,
+          74.8663101604278
+        ],
+        [
+          411.17647058823536,
+          2.6737967914438503
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "polygon",
+      "flags": {},
+      "mask": null
+    }
+  ],
+  "imagePath": "../raw_frames/frame_20260905_153808_0014.jpg",
+  "imageData": null,
+  "imageHeight": 480,
+  "imageWidth": 640
+}

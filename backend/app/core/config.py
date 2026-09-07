@@ -31,7 +31,7 @@ class Settings(BaseSettings):
         "todinho",
     ]
 
-    IOU_THRESHOLD: float = 0.15
+    IOU_THRESHOLD: float = 0.10
     INTERVALO_PROCESSAMENTO: float = 0.05
 
     RAW_FRAMES_DIR: str = str(BASE_DIR / "data" / "raw_frames")

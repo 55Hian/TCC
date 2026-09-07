@@ -1,0 +1,154 @@
+{
+  "version": "7.4.1",
+  "flags": {},
+  "shapes": [
+    {
+      "label": "creme_leite",
+      "points": [
+        [
+          105.0,
+          93.0
+        ],
+        [
+          197.0,
+          194.0
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "mask",
+      "flags": {},
+      "mask": "iVBORw0KGgoAAAANSUhEUgAAAF0AAABmCAAAAACMp8JxAAABd0lEQVR4nN2a4ZKCMBCDk47v/8q5kbMVR3C67ea4mh8MYvkawlorlQiJu33tX+ylw+Yh9ic1fEG/iKhuLjjv1xCgx6RoMt1ivcx+OvvprbHFe5OFrjCdI9147iq2LW25c9va6h339L01w/SGO+l/eOdQzdvo/mRYjNZhHt9ptA5zRZZvp9NKx7p0WulYl85RtjroHIXDNyf4VfFZx9V3lVb6jPRxLkbM6pZOPEuG2XA0XDL39bNqgOOP6p1WuvXXAS14XD1GTk0kV/Xe6FzXO610rEeXlb6pOGPHorlb6XrQjbFjyWRkpT9UnLHD411WelV5LlIYVHZrIA468vGqO7VkUktHdeeyp53MS2bQQQI92sOzTHpz11BlBZ92KnYV/TWjgYYRJ7TS0ddc637zyUrHl9CZfYKmvCsyJAwOszzvfTZ3eu8qz9/SLJ397pMrUtN0XVYzciYjpNDV1yxzFVFvRxKTkdG7jg4OT+deTjTN0ts/ZY71A3gUNNIsOHibAAAAAElFTkSuQmCC"
+    },
+    {
+      "label": "mao",
+      "points": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          231.0,
+          128.0
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "mask",
+      "flags": {},
+      "mask": "iVBORw0KGgoAAAANSUhEUgAAAOgAAACBCAAAAADvOak2AAAD7ElEQVR4nOVcWRaDIAzM5Hn/K6evroC7EEh0Pqi1xTAMCYsoaA8gkj4BGYHEX5F8PwSQUhvT/4c5yHOiNDK1I9sJRnIYy/wXRiLS2KD/PxdJah/PNeXpCjJnWo7MYSrZqM7gaGfAlPbNwKhXpniuAY/5AQxKJokxIDpYkvNcWBybPqAoOePZS9TH0eFoOkfY0H762QnHlaJTaNkBwlqRJeo6QeCj/5CCfSUlOBrPO5L0hosiHTDOiQdkdATsiWdOSdkTz3tAdOQrGK2bbtK9LEDgpOKO6HUgZX496toYPG1pOs3VktPB+CLsid4WdpH8+Q0+GowIAySzTV9E123v8jwLvprulqbDXHpYyKPg/NpHHVHd1m4kEv2YjvmnibfTado4VZuEwuKyfycNVZz/Qp4Xx8alTDpV1A3ipZQ5wkgfZKO4G7nrPFrw7qPDaOZcUZ88A3+UVQ0g7Uhd++je4snWV2c+eoRkKCSH3m0bOb1gR06Q29V35AEFBjTsqOVmAR44lhihwj7NMlSZXCBfDzZ827coMCfWkSkIe+GZC3bDE58IRlSk6bpAbsxk+giYnCA3krCfJcAiFQUyj0w94INlkWAEcoBs/+qo9vbTYWWyeu0CDW/3ZV3BYvci7XmSk340v911pIzV8uq13cTFwfomIlr9vbwWk31Wvr6ZYRfrm0i4Ptrd7TQYoYFNbmAz2EtbD0wfkZQr29vYbVAHTB8B61xWLLmn4sio31Oww+hJsxVrsxeJH/w7KOAts2Kt6cqc2AMXvNZ6e8SubvfaEcxHXbFzGabSOK7+5cnPytUFtHnOSOm6VRTdK092VcKKorLxKNip3ZvXt6CozIkOxPNYF0r/dTtN+68uuVa0Pti2oJaIil4W+YyiVI4s53YrDwrSZOrNTzPKesO+aXBmfk11hooUA0spQhVwd3BZWlF1Ryt8J4ofl4OUqyh+MUYzovLYYqPlTn6WLaOa744W0CQYycZj4joQE4oiw+K1vPHbItoQFfKI7lGuZ1ybblFjm3f9pDVRySnF9XwKNclkEBothmuW4GJ2Fc9gqoi7Pcvrm25zopJp7FJ+aU9Usq01HGvwjf+62JNuw0dhnqhIraYrTYlKNUXVvJjvPeKQh5ZOzq+fn925412OIZrVJZMlKLYZbmu+HpgMQRotpcj6hVZ+wVWt2RwZSXFjsNm9iIa5ox9VfQT7xlXs1q3XAF3d5tSu8TIZgVQnKu/oTq4o+kqmXU1HsjZNkyB9DTCldXaYtA5G8jb99n00fDX2K1nDiDn1uoW2gdTe9kKbfhuCuoUrhuXFQ0AJD13f7KCg+AaIsN6l+/fkJ2/Mb4cff6T471rYj4sAAAAASUVORK5CYII="
+    },
+    {
+      "label": "creme_leite",
+      "points": [
+        [
+          49.0,
+          168.0
+        ],
+        [
+          183.0,
+          273.0
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "mask",
+      "flags": {},
+      "mask": "iVBORw0KGgoAAAANSUhEUgAAAIcAAABqCAAAAACzVh2KAAAB7ElEQVR4nN3b227DIBAE0B2U///lqRQpDo7BXAy7o85DW6WN9wTw4joKbDQwXh55h58ff3/fd9TWH/BU/1Oz+byDtsaBvPpEeiVoKjBtGIHcVcEzwZAj1QkYO9KzYOtg9L+M0ngACxmdeRUfhbOiOB5wRxQdWFwBU/MCi8nveHB9Ccw4YDFJGgxLDgyMOrCF0XXcpDApVt3n/qkDIw5EQrzmBd2OzasUKusUfY79Jy26HA5Bh8Olh6Ht8AlEHIaGI3JrCdlfAJV9DjcO12lB3eEb1BzeqxQVh0BSSFUUHQHNAyVHRHB1xPRSXBxBgYjjnBS3xeHsiAtEHKbiQOYIvQLC12EaSbHlcThc7p63k3xu4zcHJDm9n9CzPigwIDh9Cwmz84Uq5y3jCMgdkYGIw1QcyBzBKzWZQpA5YgckGw+KOCwScm7oEFmnDHNcRgAi5y1DGLz2D6r0MYo4jFTp6xRxmDOEIvucVR0UcXhH3kERhzlCeDsvVFkfFHGYioMiDvOBsD0vVFkfFHEYVc4Xet4PCoX09g+aSB/jTgEH+il3QgYcRpX9hbsAHNznuAsy6LC9/12N7PsUcRhVroO4vD7nrse4HDLn2Jbx21BYWZ7z40HbkalXh1XV+fiQ6KiBb6Hj02/r85Z8vzzMH/AOSNjsvknWAAAAAElFTkSuQmCC"
+    },
+    {
+      "label": "creme_leite",
+      "points": [
+        [
+          13.0,
+          285.0
+        ],
+        [
+          163.0,
+          389.0
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "mask",
+      "flags": {},
+      "mask": "iVBORw0KGgoAAAANSUhEUgAAAJcAAABpCAAAAAASbO7MAAAB90lEQVR4nO2bC2+DMAyE7/z///NNdBtUlFdezmnaSUW0BPPJMU5iKDFOXPfUcG4nhDOpPxehDvwqas2xfqwGYwpSOVjkYYEtXOOwUGI7ErHQ1I8jxVqu0e6ip7/wGCyyo4ue/nqqfC6Wc+UkCbr2Iwu50nIqXeOervcjC7hSh0a65i+65lU+5Eqf4dB1HOLFsf/xscxhMXUCTdd+5B3XrPUGXeOeplzgFdfMZSM9/YVDMAcunHJNXv3T1V885ppfLKGnv/AB5sIFmnKBplzgnmt+2H+Lnv7CO1j4uAvvKFb+wgZmxoVfsHDqxkX09Bd+wIKeYAFYggUMRVMuuHLRlAuuXDTlgi2XYKmoeBckQYqal1SS4kuucS+Y3o+CaZ4QTPOX4CRteVVyzfeC6Tgk+IiXXydJH+O2XOcTguk8R3KdfwkGYsGvWdLpfFWu82jJdX4vmK47hJli9cFh0u06bWKUxfXhaWRx12ASGbs16iU9rwNMcBm7N0z016t5rtMK6jkaybG/SkmdSXKtfwmmdTnBk4sYLP0tfyEr9svrvhrCsTdeFTDEIKmtTi651u/Vm2Nvtfa5gnqxnNisft6hPixnFuufw6gHy6m9pluL6Cf1NU20S2Pssu10DewKLvYfmlrbvf5MnDGsvS5ILp9l93CztVs3h/oCibZK3IJY+3sAAAAASUVORK5CYII="
+    },
+    {
+      "label": "gelatina",
+      "points": [
+        [
+          193.0,
+          338.0
+        ],
+        [
+          340.0,
+          473.0
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "mask",
+      "flags": {},
+      "mask": "iVBORw0KGgoAAAANSUhEUgAAAJQAAACICAAAAAAkQ53oAAABUUlEQVR4nO3cwUrDUBgF4fkH3/+Vr1hBumg0WjQTybdoCyUwPTeUrjp8Zj5eLf7Q/OitLz33GeZXmp6xwFoTsx11WNObzaWOM1tRhw5FcCk2oo4diuRSL72deBRweBMGm0jeU3KGqOF4EiRBEiQniBoCJEiCJEiCJEiCJEiCJEj6UUOBBEmQ9Kxi1Jzg+IaCdYKlIiRIgiRI6lFDgwRJkARJkARJkMSjhggJkiAJkiBpRw0VEiRBkrOKUVxRu13Ht9e11D9ZasiQIAmSIAmSIAmSctTQIUESJEESJOGoIUSCJEiCJEiCpBs1lEiQ1KxiFFfUfuHjG1IkSIIkSIIkSKpRQ4sESZAESZAESTRqiJEgCZIgg7cU1aV6JEhi1i0qdp9PcSm6xxckQRIkQRJk7GsqvBRB0rKCUev2OKlfnuv96RtFc/enbveXPfFPb/P42lfHuhAhlVI0+wAAAABJRU5ErkJggg=="
+    },
+    {
+      "label": "gelatina",
+      "points": [
+        [
+          207.0,
+          194.0
+        ],
+        [
+          331.0,
+          314.0
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "mask",
+      "flags": {},
+      "mask": "iVBORw0KGgoAAAANSUhEUgAAAH0AAAB5CAAAAAAxenHvAAABT0lEQVR4nO3b0W6DMAyFYR8r7//KnroxGF20lYn4n2SfG2gr8clOgKopspTo2I352wsyPfoXfqxAX65pEOidnb98iKP1f6/9jhkzGPaavujUGOnij4TWm8e0G9nyKYOjzcwBc6Jnlq5vOhJvPTnatt15qvVuZLykLlS3k07c4YyrXahulXUVrt2068gJp7qdt9aLjrt61kGJHveSnTeB3ymt8l0mCteu7nzhO6xQnUpUPeMitiGnxj3WrEW+Zhs464Ke89Y62XmhesXfrKLnPBgncWu9bOeF6mCcxK11Ko7Jj9TWhepkvHUoTsHvaZ2KY3JhPVDd/oEuVDdUD1Q3JoHqH2mdip+eW0pLfOogbn5+aCsXN6L2o9ysVaHHAlQk//Mhfvlcp00au+XeFbGrE1hP2xR0z65e5284UzXZWyvOdZv4obXXoifx8TLx2vcGZFUkBPuSRKIAAAAASUVORK5CYII="
+    },
+    {
+      "label": "cha",
+      "points": [
+        [
+          362.0,
+          98.0
+        ],
+        [
+          470.0,
+          224.0
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "mask",
+      "flags": {},
+      "mask": "iVBORw0KGgoAAAANSUhEUgAAAG0AAAB/CAAAAADAjRMaAAABgklEQVR4nO2aga7CIAxFexv//5evYUw35ttzarlm2JOIsmDP6JhgBuwz8EJbHmqN0vCluDtwP0ZA9C28mMg0cdFoZtyEMnOlzFwpszaTQhukNlPaILXZaDZ8qW8QyPgTmZTgGs0P2SC1afDxbZDImL9cUbgJ4TeuG0bsm6XtxJmE1CbDdSpL25lX5pDadLjQZSPP3TayDcobwHKUROFhkY6Qtih8aBukNiVeHnYJbZDalHjagvCoQIdIWxQeFukIaTtjJpnXLQyPC3WAtEXhI9sgtVFqs1wrny6TzH+LcbhReAu4TmVKG2cbR84ky0sxWrypVSMlNhrqbMfOTzLJIqoZLdVONtzebgI8Nb0323O7g3gSPe/WtsX0NdTt2nOBZuP18qnHsgS75+h9TNymic11ixsXqJlcpbMUNf5D3z5JLaaSS6/ut690ZTceaAuttz+wAcC9WB0rDy4xzytLq85nwV6Bt0zdsz7gr2PrTPpoAxKyFR7+rXbRLWOy9+q1Hf1X9bpC96AMW3gAAAAASUVORK5CYII="
+    },
+    {
+      "label": "cha",
+      "points": [
+        [
+          200.0,
+          79.0
+        ],
+        [
+          304.0,
+          181.0
+        ]
+      ],
+      "group_id": null,
+      "description": "",
+      "shape_type": "mask",
+      "flags": {},
+      "mask": "iVBORw0KGgoAAAANSUhEUgAAAGkAAABnCAAAAAAm4zOWAAABMklEQVR4nO3a2w6CMBAE0JkN///LY6JBRSgptJ3ETefFcHGP20VegOgdAirs72m8s8cWtIadz1tPV+1XdFO6vsi6vnq9JrlYlNNazYgqeurZSVEag/xIA5F3/UGGtpvL8F7WBFwJV0sw9oQpXQi3m3P1WhIpJNokZJRok5BRok2CT6JNQkaJNumTKbUMKuBKTKlhUAEXFXAlUkm0Scgo0SY9M6WWQQVciSndDefqtSXSSUzYExCySZjSH6we4/hB5b9fEbJJyCjJJsEnySYhlaSX5Fg+/nxmmpNsEnySbJLpKnc0FTCFX5LyzQmDm4qNO85Rh7e1KqKDO2v3G62KpTtR2u/aVW6lVDrQcU46P8wh77Ud5ahsPaXqM0tVKyxdQE5rFi2B9/7hJ7+e0OZo4x3kAdwrI9nssisYAAAAAElFTkSuQmCC"
+    }
+  ],
+  "imagePath": "../raw_frames/frame_20260905_153946_0062.jpg",
+  "imageData": null,
+  "imageHeight": 480,
+  "imageWidth": 640
+}
