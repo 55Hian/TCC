@@ -1,0 +1,22 @@
+{
+  "yolov8n": {
+    "origem": "G:/000. TCC/experiments/benchmarks/comparativo_20260907_50ep_corrigido/yolov8n/weights/best.pt",
+    "sha256": "da44709edccc21f35e6f5b9887b963e02918463e6bb93c3531786d2bcec1e790",
+    "destino": "G:\\000. TCC\\models\\trained\\yolov8n\\best.pt"
+  },
+  "yolo12n": {
+    "origem": "G:/000. TCC/experiments/benchmarks/comparativo_20260907_50ep_corrigido/yolo12n/weights/best.pt",
+    "sha256": "ee7897cae25f7a45d8ce89511f682f6fb1a70ba22db868afdbbc4edd3013a6c0",
+    "destino": "G:\\000. TCC\\models\\trained\\yolo12n\\best.pt"
+  },
+  "yolo26s": {
+    "origem": "G:/000. TCC/experiments/benchmarks/comparativo_20260907_50ep_corrigido/yolo26s/weights/best.pt",
+    "sha256": "05f7bf34b125412ab8c2ebbf0367c4dd4d21960b61b8bc1ae50e666226126fcc",
+    "destino": "G:\\000. TCC\\models\\trained\\yolo26s\\best.pt"
+  },
+  "yolo26m": {
+    "origem": "G:/000. TCC/experiments/benchmarks/comparativo_20260907_50ep_corrigido/yolo26m/weights/best.pt",
+    "sha256": "983650b23831f2a8e4645609702c08570ffb4bb0294ec77fe4075c9985c4fb2d",
+    "destino": "G:\\000. TCC\\models\\trained\\yolo26m\\best.pt"
+  }
+}

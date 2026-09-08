@@ -25,8 +25,8 @@ function conectarWebSocket() {
 
 async function atualizarStatusMonitor() {
   try {
-    const { status, erro, camera } = await apiGet("/api/monitoramento/status");
-    streamStatus.textContent = `${status} | camera: ${camera.status} (${camera.consumidores.join(", ") || "sem consumidores"})` + (erro ? ` | ${erro}` : "");
+    const { status, erro, camera, modelo_configurado, modelo_carregado } = await apiGet("/api/monitoramento/status");
+    streamStatus.textContent = `${status} | modelo: ${modelo_carregado || modelo_configurado} | camera: ${camera.status} (${camera.consumidores.join(", ") || "sem consumidores"})` + (erro ? ` | ${erro}` : "");
     streamImg.style.visibility = camera.status === "recebendo" ? "visible" : "hidden";
   } catch (e) {
     streamStatus.textContent = "erro";

@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from core.config import settings
 from core.state import state
 from services.shared_camera import camera
-from services.event_service import gerar_eventos
+from services.event_service import EventService
 from services.vision_service import VisionService
 
 _thread = None
@@ -20,9 +20,12 @@ _stop_flag = threading.Event()
 def _loop_monitoramento():
     try:
         ia_visao = VisionService()
+        interacoes = EventService()
+        state.monitor_modelo = settings.MODELO_ATIVO
+        state.monitor_pesos = settings.MODEL_PATH
     except Exception as exc:
         state.monitor_status = "erro"
-        state.monitor_erro = f"Falha ao carregar modelo YOLO: {exc}"
+        state.monitor_erro = f"Falha ao iniciar visao: {exc}"
         return
 
     state.monitor_status = "aguardando_camera"
@@ -45,10 +48,10 @@ def _loop_monitoramento():
             state.monitor_status = "rodando"
             state.monitor_erro = None
 
-            agora = time.time()
+            agora = time.monotonic()
             if agora - ultimo_processamento >= settings.INTERVALO_PROCESSAMENTO:
                 df_atual = ia_visao.processar_frame(frame)
-                for evento in gerar_eventos(df_atual):
+                for evento in interacoes.processar(df_atual, df_atual.attrs.get("timestamp", agora)):
                     evento["timestamp"] = datetime.now(timezone.utc).isoformat()
                     state.adicionar_evento(evento)
                 ultimo_processamento = agora
@@ -58,8 +61,11 @@ def _loop_monitoramento():
         state.monitor_erro = str(exc)
         return
     finally:
-        if token is not None:
-            camera.release(token)
+        try:
+            ia_visao.close()
+        finally:
+            if token is not None:
+                camera.release(token)
 
     state.monitor_status = "parado"
 

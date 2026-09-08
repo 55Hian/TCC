@@ -10,6 +10,8 @@ class AppState:
         self._eventos = deque(maxlen=max_eventos)
         self.monitor_status = "parado"  # parado | rodando | erro
         self.monitor_erro = None
+        self.monitor_modelo = None
+        self.monitor_pesos = None
         self.ultimo_processamento = None
         self.treino_status = "ocioso"  # ocioso | rodando | concluido | erro
         self.treino_erro = None

@@ -45,8 +45,8 @@ def health():
 
 # graficos/resultados de treino (read-only) e o frontend estatico.
 # mount() e resolvido por ultimo na tabela de rotas, entao nao conflita com /api e /ws acima.
-if os.path.isdir(settings.TRAINING_PROJECT):
-    app.mount("/static/experiments", StaticFiles(directory=settings.TRAINING_PROJECT), name="experiments")
+app.mount("/static/experiments", StaticFiles(directory=settings.TRAINING_PROJECT, check_dir=False), name="experiments")
+app.mount("/static/benchmarks", StaticFiles(directory=settings.BENCHMARKS_DIR, check_dir=False), name="benchmarks")
 
 FRONTEND_DIR = BASE_DIR / "frontend"
 if FRONTEND_DIR.is_dir():

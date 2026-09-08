@@ -15,3 +15,7 @@ data/external_validation/
 # Saidas avulsas; experimentos existentes continuam versionados.
 runs/
 .env
+
+# Modelo MediaPipe reproduzivel via scripts/setup_hands.py
+models/hand_landmarker.task
+models/hand_landmarker.task.part

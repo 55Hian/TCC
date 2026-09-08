@@ -10,7 +10,7 @@ disable-model-invocation: false
 
 ## Objetivo
 
-Reconstruir e validar o projeto descrito em `docs/MANUAL_DE_USO.md` (estrutura atual, backend FastAPI + frontend) e em `docs/MANUAL_RECONSTRUCAO.md` (historico), mantendo a separacao entre camera, visao, eventos, API e treinamento.
+Reconstruir e validar o projeto descrito em `docs/MANUAL_DE_USO.md` (estrutura atual, backend FastAPI + frontend) e em `docs/MANUAL_TECNICO.md` (referencia tecnica), mantendo a separacao entre camera, visao, eventos, API e treinamento.
 
 ## Procedimento
 

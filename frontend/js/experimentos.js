@@ -9,8 +9,8 @@ async function carregarExperimentos() {
         <h3>${exp.nome}</h3>
         <p>Pesos: ${exp.tem_pesos ? "sim" : "nao"} · Resultados: ${exp.tem_resultados ? "sim" : "nao"}</p>
         ${
-          exp.tem_resultados
-            ? `<img class="grafico" src="/static/experiments/${exp.nome}/results.png" alt="resultados ${exp.nome}" loading="lazy">`
+          exp.grafico_url
+            ? `<img class="grafico" src="${exp.grafico_url}" alt="resultados ${exp.nome}" loading="lazy">`
             : ""
         }
       </div>`

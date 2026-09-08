@@ -10,9 +10,10 @@ if PROJ_DIR not in sys.path:
 
 from controllers.api_controller import enviar_eventos
 from services.camera_service import gerador_de_frames
-from services.event_service import gerar_eventos
+from services.event_service import EventService
 from services.training_service import rodar_pipeline_treinamento
 from services.vision_service import VisionService
+from services.interaction_overlay import draw_interactions
 from core.config import settings
 
 
@@ -23,27 +24,32 @@ def main():
 
     try:
         ia_visao = VisionService()
+        interacoes = EventService()
     except Exception as exc:
-        print(f"[ERRO] Arquivo de pesos YOLO nao encontrado ou invalido: {exc}")
+        print(f"[ERRO] Falha ao iniciar visao: {exc}")
         return
 
-    ultimo_processamento = time.time()
-    for frame in gerador_de_frames(settings.ESP32_STREAM_URL):
-        cv2.imshow("Monitoramento de Estoque", frame)
-        tempo_atual = time.time()
-        if tempo_atual - ultimo_processamento >= settings.INTERVALO_PROCESSAMENTO:
-            df_atual = ia_visao.processar_frame(frame)
-            classes_detectadas = df_atual["classe"].tolist() if not df_atual.empty else []
-            # print(f"[VISAO] Deteccoes: {len(df_atual)} | Classes: {classes_detectadas}")
-            eventos = gerar_eventos(df_atual)
-            if eventos:
-                enviar_eventos(eventos)
-            ultimo_processamento = tempo_atual
+    ultimo_processamento = 0.0
+    frames = gerador_de_frames(settings.ESP32_STREAM_URL)
+    try:
+        for frame in frames:
+            tempo_atual = time.monotonic()
+            display = frame
+            if tempo_atual - ultimo_processamento >= settings.INTERVALO_PROCESSAMENTO:
+                df_atual = ia_visao.processar_frame(frame)
+                eventos = interacoes.processar(df_atual, df_atual.attrs.get("timestamp", tempo_atual))
+                display = draw_interactions(frame, interacoes)
+                if eventos:
+                    enviar_eventos(eventos)
+                ultimo_processamento = tempo_atual
+            cv2.imshow("Monitoramento de Estoque", display)
+            if cv2.waitKey(1) & 0xFF == ord("q"):
+                break
+    finally:
+        frames.close()
+        ia_visao.close()
+        cv2.destroyAllWindows()
 
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
-
-    cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
