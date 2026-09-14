@@ -1,3 +1,4 @@
+"""Prepara o dataset, executa o treino e publica apenas pesos concluídos e válidos."""
 import os
 import random
 import shutil
@@ -9,27 +10,27 @@ from ultralytics import YOLO
 
 from services.annotation_converter import converter_labelme_para_yolo
 from core.config import settings
-from services.model_service import publish_weights
+from services.model_service import publicar_pesos
 
 
-def _resolve_device():
+def _resolver_dispositivo():
     if torch.cuda.is_available():
         return 0, torch.cuda.get_device_name(0)
     return "cpu", "CPU"
 
 
-def _train_dataset(data, base_model, epochs, imgsz, fraction):
-    name = settings.MODELO_ATIVO
-    device, device_name = _resolve_device()
-    print(f"[TREINO] Modelo: {name}; dispositivo: {device_name}")
-    model = YOLO(base_model)
-    model.train(data=data, epochs=epochs, imgsz=imgsz, fraction=fraction,
+def _treinar_dataset(dados, base_model, epochs, imgsz, fraction):
+    nome = settings.MODELO_ATIVO
+    dispositivo, nome_dispositivo = _resolver_dispositivo()
+    print(f"[TREINO] Modelo: {nome}; dispositivo: {nome_dispositivo}")
+    modelo = YOLO(base_model)
+    modelo.train(data=dados, epochs=epochs, imgsz=imgsz, fraction=fraction,
                 project=str(Path(settings.TRAINING_PROJECT).resolve()),
-                name=f"{name}_{uuid4().hex[:12]}", device=device)
-    best = Path(model.trainer.save_dir) / "weights" / "best.pt"
+                name=f"{nome}_{uuid4().hex[:12]}", device=dispositivo)
+    melhores_pesos = Path(modelo.trainer.save_dir) / "weights" / "best.pt"
     # Apenas um treino concluido com pesos validos substitui a copia de inferencia.
-    published = publish_weights(best, name)
-    return dict(modelo=name, experimento=str(model.trainer.save_dir), pesos=published)
+    publicado = publicar_pesos(melhores_pesos, nome)
+    return dict(modelo=nome, experimento=str(modelo.trainer.save_dir), pesos=publicado)
 
 
 def rodar_pipeline_treinamento(
@@ -53,8 +54,14 @@ def rodar_pipeline_treinamento(
         raise FileNotFoundError(f"Modelo base ausente: {base_model}")
 
     if settings.USE_EXTERNAL_VALIDATION_DATASET:
-        return _train_dataset(settings.EXTERNAL_VALIDATION_DATASET_YAML, base_model, epochs, imgsz, fraction)
+        return _treinar_dataset(settings.EXTERNAL_VALIDATION_DATASET_YAML, base_model, epochs, imgsz, fraction)
 
+    caminho_yaml = _preparar_dataset(pasta_fotos, pasta_json, pasta_yolo, pasta_dataset)
+    return _treinar_dataset(caminho_yaml, base_model, epochs, imgsz, fraction)
+
+
+def _preparar_dataset(pasta_fotos, pasta_json, pasta_yolo, pasta_dataset):
+    """Converte, separa os pares imagem/rótulo e grava o YAML para o treino."""
     os.makedirs(pasta_json, exist_ok=True)
     os.makedirs(pasta_yolo, exist_ok=True)
     if not os.listdir(pasta_json):
@@ -63,18 +70,18 @@ def rodar_pipeline_treinamento(
         )
 
     converter_labelme_para_yolo(pasta_json, pasta_yolo, settings.CLASSES)
-    for split in ("train", "val"):
-        os.makedirs(os.path.join(pasta_dataset, "images", split), exist_ok=True)
-        os.makedirs(os.path.join(pasta_dataset, "labels", split), exist_ok=True)
+    for particao in ("train", "val"):
+        os.makedirs(os.path.join(pasta_dataset, "images", particao), exist_ok=True)
+        os.makedirs(os.path.join(pasta_dataset, "labels", particao), exist_ok=True)
 
     imagens = [
         nome for nome in os.listdir(pasta_fotos)
         if nome.lower().endswith((".jpg", ".jpeg", ".png"))
     ]
     validos = [
-        img for img in imagens
+        imagem for imagem in imagens
         if os.path.exists(
-            os.path.join(pasta_yolo, f"{os.path.splitext(img)[0]}.txt")
+            os.path.join(pasta_yolo, f"{os.path.splitext(imagem)[0]}.txt")
         )
     ]
     if not validos:
@@ -82,21 +89,11 @@ def rodar_pipeline_treinamento(
             f"Nenhuma imagem convertida foi encontrada em '{pasta_yolo}'."
         )
 
-    random.seed(42)
-    random.shuffle(validos)
+    # A semente local mantém a divisão sem afetar o gerador aleatório do processo.
+    random.Random(42).shuffle(validos)
     corte = int(len(validos) * 0.8)
     conjuntos = {"train": validos[:corte], "val": validos[corte:]}
-    for split, arquivos in conjuntos.items():
-        for imagem in arquivos:
-            nome_base = os.path.splitext(imagem)[0]
-            shutil.copy(
-                os.path.join(pasta_fotos, imagem),
-                os.path.join(pasta_dataset, "images", split, imagem),
-            )
-            shutil.copy(
-                os.path.join(pasta_yolo, f"{nome_base}.txt"),
-                os.path.join(pasta_dataset, "labels", split, f"{nome_base}.txt"),
-            )
+    _copiar_conjuntos(conjuntos, pasta_fotos, pasta_yolo, pasta_dataset)
 
     caminho_yaml = os.path.join(pasta_dataset, "data.yaml")
     with open(caminho_yaml, "w", encoding="utf-8") as arquivo:
@@ -105,4 +102,27 @@ def rodar_pipeline_treinamento(
         arquivo.write("val: images/val\n")
         arquivo.write(f"names: {settings.CLASSES}\n")
 
-    return _train_dataset(caminho_yaml, base_model, epochs, imgsz, fraction)
+    return caminho_yaml
+
+
+def _copiar_conjuntos(conjuntos, pasta_fotos, pasta_yolo, pasta_dataset):
+    """Copia cada imagem junto com seu rótulo para a mesma partição."""
+    for particao, arquivos in conjuntos.items():
+        for imagem in arquivos:
+            nome_base = os.path.splitext(imagem)[0]
+            shutil.copy(
+                os.path.join(pasta_fotos, imagem),
+                os.path.join(pasta_dataset, "images", particao, imagem),
+            )
+            shutil.copy(
+                os.path.join(pasta_yolo, f"{nome_base}.txt"),
+                os.path.join(pasta_dataset, "labels", particao, f"{nome_base}.txt"),
+            )
+
+
+
+# Compatibilidade de importação com os nomes anteriores.
+_resolve_device = _resolver_dispositivo
+def _train_dataset(data, base_model, epochs, imgsz, fraction):
+    """Aceita os parâmetros nomeados da interface anterior."""
+    return _treinar_dataset(data, base_model, epochs, imgsz, fraction)

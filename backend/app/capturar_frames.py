@@ -1,3 +1,4 @@
+"""Captura periódica de imagens com gravação atômica e fechamento da fonte."""
 import argparse
 import os
 import time
@@ -19,6 +20,19 @@ def gerar_nome_arquivo(contador):
     return time.strftime("frame_%Y%m%d_%H%M%S") + f"_{uuid.uuid4().hex[:8]}_{contador:04d}.jpg"
 
 
+def _salvar_jpeg(imagem, caminho):
+    """Publica o JPEG completo por troca atômica; limpa o temporário em falhas."""
+    ok, jpeg = cv2.imencode(".jpg", imagem)
+    if not ok:
+        raise OSError("Falha ao codificar imagem JPEG")
+    temporario = Path(caminho + ".part")
+    try:
+        temporario.write_bytes(jpeg.tobytes())
+        os.replace(temporario, caminho)
+    finally:
+        temporario.unlink(missing_ok=True)
+
+
 def capturar_frames(
     pasta_saida=None,
     intervalo=2.0,
@@ -38,11 +52,11 @@ def capturar_frames(
     gerador = fonte_frames if fonte_frames is not None else gerador_de_frames(settings.ESP32_STREAM_URL)
 
     try:
-        for frame in gerador:
+        for imagem in gerador:
             agora = time.time()
 
             if mostrar_janela:
-                cv2.imshow("Captura automatica - Q encerra", frame)
+                cv2.imshow("Captura automatica - Q encerra", imagem)
                 tecla = cv2.waitKey(1) & 0xFF
                 if tecla in (ord("q"), ord("Q")):
                     print("[CAPTURA] Encerrado pelo usuario.")
@@ -51,15 +65,7 @@ def capturar_frames(
             if deve_capturar(ultimo_salvamento, agora, intervalo):
                 nome = gerar_nome_arquivo(contador)
                 caminho = os.path.join(pasta_saida, nome)
-                ok, jpeg = cv2.imencode(".jpg", frame)
-                if not ok:
-                    raise OSError("Falha ao codificar imagem JPEG")
-                temporario = Path(caminho + ".part")
-                try:
-                    temporario.write_bytes(jpeg.tobytes())
-                    os.replace(temporario, caminho)
-                finally:
-                    temporario.unlink(missing_ok=True)
+                _salvar_jpeg(imagem, caminho)
                 contador += 1
                 ultimo_salvamento = agora
                 print(f"[CAPTURA] Salvo: {caminho}")
@@ -79,33 +85,33 @@ def capturar_frames(
 
 
 def main():
-    parser = argparse.ArgumentParser(
+    argumentos = argparse.ArgumentParser(
         description="Captura automatica de frames da ESP32-CAM para anotacao."
     )
-    parser.add_argument("--saida", default=settings.RAW_FRAMES_DIR, help="Pasta para salvar os JPEGs.")
-    parser.add_argument(
+    argumentos.add_argument("--saida", default=settings.RAW_FRAMES_DIR, help="Pasta para salvar os JPEGs.")
+    argumentos.add_argument(
         "--intervalo",
         type=float,
         default=2.0,
         help="Intervalo entre capturas automaticas, em segundos.",
     )
-    parser.add_argument(
+    argumentos.add_argument(
         "--max-frames",
         type=int,
         default=0,
         help="Numero maximo de frames a capturar (0 = ilimitado).",
     )
-    parser.add_argument(
+    argumentos.add_argument(
         "--sem-janela",
         action="store_true",
         help="Executa sem abrir janela (modo headless, util para testes/servidores).",
     )
-    args = parser.parse_args()
+    opcoes = argumentos.parse_args()
     capturar_frames(
-        pasta_saida=args.saida,
-        intervalo=max(0.1, args.intervalo),
-        max_frames=max(0, args.max_frames),
-        mostrar_janela=not args.sem_janela,
+        pasta_saida=opcoes.saida,
+        intervalo=max(0.1, opcoes.intervalo),
+        max_frames=max(0, opcoes.max_frames),
+        mostrar_janela=not opcoes.sem_janela,
     )
 
 

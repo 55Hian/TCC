@@ -14,3 +14,11 @@ Execute a partir da raiz, com o ambiente e os pesos preparados conforme o Manual
 ```
 
 Abra http://localhost:8000. A arquitetura de treino e inferência é escolhida por MODELO_ATIVO em backend/app/core/config.py; alterações exigem reiniciar o processo.
+
+Para validar alterações no código:
+
+```powershell
+.\.venv\Scripts\python.exe -B scripts/validar_projeto.py
+```
+
+Veja [Refatoração e testes](docs/REFATORACAO.md) para convenções, compatibilidade e resultados.

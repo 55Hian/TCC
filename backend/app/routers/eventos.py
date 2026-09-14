@@ -1,3 +1,4 @@
+"""Recebe eventos, informa o monitoramento e mantém assinaturas WebSocket."""
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -32,17 +33,17 @@ def listar_eventos():
 @router.post("/eventos", status_code=201)
 def criar_evento(evento: EventoEntrada):
     """Recebe um evento externo (compat. com o antigo API_ENDPOINT) e distribui via WebSocket."""
-    payload = evento.model_dump(exclude_none=True)
-    payload["timestamp"] = datetime.now(timezone.utc).isoformat()
-    state.adicionar_evento(payload)
-    return payload
+    dados_evento = evento.model_dump(exclude_none=True)
+    dados_evento["timestamp"] = datetime.now(timezone.utc).isoformat()
+    state.adicionar_evento(dados_evento)
+    return dados_evento
 
 
 @router.get("/monitoramento/status")
 def status_monitoramento():
-    age = None if state.ultimo_processamento is None else time.monotonic() - state.ultimo_processamento
+    idade = None if state.ultimo_processamento is None else time.monotonic() - state.ultimo_processamento
     return {"status": state.monitor_status, "erro": state.monitor_erro,
-            "camera": camera.status(), "idade_processamento_segundos": age,
+            "camera": camera.status(), "idade_processamento_segundos": idade,
             "modelo_configurado": settings.MODELO_ATIVO,
             "modelo_carregado": state.monitor_modelo, "pesos_carregados": state.monitor_pesos}
 

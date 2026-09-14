@@ -1,4 +1,4 @@
-import os
+"""Valida pedidos de treino e acompanha sua execução sem bloquear a API."""
 import threading
 
 from fastapi import APIRouter, HTTPException
@@ -8,6 +8,7 @@ from pathlib import Path
 from core.config import settings
 from core.state import state
 from services.training_service import rodar_pipeline_treinamento
+from services.experiment_service import listar_experimentos as consultar_experimentos
 
 router = APIRouter(prefix="/api/treino", tags=["treino"])
 
@@ -27,9 +28,9 @@ def _executar(base_model_path, epochs, imgsz, fraction):
     try:
         rodar_pipeline_treinamento(base_model=base_model_path, epochs=epochs, imgsz=imgsz, fraction=fraction)
         state.treino_status = "concluido"
-    except Exception as exc:
+    except Exception as erro:
         state.treino_status = "erro"
-        state.treino_erro = str(exc)
+        state.treino_erro = str(erro)
 
 
 @router.post("/start")
@@ -61,19 +62,4 @@ def status_treino():
 
 @router.get("/experimentos")
 def listar_experimentos():
-    from urllib.parse import quote
-    experiments = []
-    sources = [(Path(settings.TRAINING_PROJECT), "/static/experiments"),
-               (Path(settings.BENCHMARKS_DIR), "/static/benchmarks")]
-    for root, url in sources:
-        if not root.is_dir():
-            continue
-        for result in sorted(root.rglob("results.csv")):
-            folder = result.parent
-            relative = folder.relative_to(root).as_posix()
-            experiments.append(dict(
-                nome=relative, tem_resultados=True,
-                tem_pesos=(folder / "weights" / "best.pt").is_file(),
-                grafico_url=f"{url}/{quote(relative, safe='/')}/results.png" if (folder / "results.png").is_file() else None,
-            ))
-    return {"experimentos": experiments}
+    return consultar_experimentos()

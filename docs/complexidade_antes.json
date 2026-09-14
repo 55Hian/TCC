@@ -1,0 +1,747 @@
+{
+  "backend/app/__init__.py": {},
+  "backend/app/capturar_frames.py": {
+    "deve_capturar": {
+      "decisoes": 1,
+      "linhas": 3
+    },
+    "gerar_nome_arquivo": {
+      "decisoes": 1,
+      "linhas": 2
+    },
+    "capturar_frames": {
+      "decisoes": 13,
+      "linhas": 57
+    },
+    "main": {
+      "decisoes": 1,
+      "linhas": 29
+    }
+  },
+  "backend/app/cli_monitor.py": {
+    "main": {
+      "decisoes": 6,
+      "linhas": 32
+    }
+  },
+  "backend/app/controllers/__init__.py": {},
+  "backend/app/controllers/api_controller.py": {
+    "enviar_eventos": {
+      "decisoes": 4,
+      "linhas": 13
+    }
+  },
+  "backend/app/core/__init__.py": {},
+  "backend/app/core/config.py": {
+    "Settings.BASE_MODEL": {
+      "decisoes": 1,
+      "linhas": 2
+    },
+    "Settings.MODEL_PATH": {
+      "decisoes": 1,
+      "linhas": 2
+    },
+    "Settings.TRAINING_NAME": {
+      "decisoes": 1,
+      "linhas": 2
+    }
+  },
+  "backend/app/core/state.py": {
+    "AppState.__init__": {
+      "decisoes": 1,
+      "linhas": 15
+    },
+    "AppState.registrar_loop": {
+      "decisoes": 1,
+      "linhas": 2
+    },
+    "AppState.adicionar_evento": {
+      "decisoes": 2,
+      "linhas": 5
+    },
+    "AppState.listar_eventos": {
+      "decisoes": 1,
+      "linhas": 3
+    },
+    "AppState._broadcast": {
+      "decisoes": 4,
+      "linhas": 9
+    }
+  },
+  "backend/app/main.py": {
+    "lifespan": {
+      "decisoes": 1,
+      "linhas": 8
+    },
+    "health": {
+      "decisoes": 1,
+      "linhas": 2
+    }
+  },
+  "backend/app/routers/__init__.py": {},
+  "backend/app/routers/dataset.py": {
+    "_extensao_valida": {
+      "decisoes": 1,
+      "linhas": 2
+    },
+    "listar_imagens": {
+      "decisoes": 5,
+      "linhas": 14
+    },
+    "obter_imagem": {
+      "decisoes": 2,
+      "linhas": 5
+    },
+    "_executar_captura": {
+      "decisoes": 2,
+      "linhas": 17
+    },
+    "iniciar_captura": {
+      "decisoes": 3,
+      "linhas": 13
+    },
+    "status_captura": {
+      "decisoes": 1,
+      "linhas": 2
+    },
+    "abrir_labelme": {
+      "decisoes": 2,
+      "linhas": 11
+    }
+  },
+  "backend/app/routers/eventos.py": {
+    "listar_eventos": {
+      "decisoes": 1,
+      "linhas": 2
+    },
+    "criar_evento": {
+      "decisoes": 1,
+      "linhas": 6
+    },
+    "status_monitoramento": {
+      "decisoes": 2,
+      "linhas": 6
+    },
+    "iniciar_monitoramento": {
+      "decisoes": 1,
+      "linhas": 3
+    },
+    "parar_monitoramento": {
+      "decisoes": 1,
+      "linhas": 3
+    },
+    "ws_eventos": {
+      "decisoes": 3,
+      "linhas": 11
+    }
+  },
+  "backend/app/routers/modelos.py": {
+    "listar_modelos": {
+      "decisoes": 4,
+      "linhas": 14
+    }
+  },
+  "backend/app/routers/stream.py": {
+    "_frames_mjpeg": {
+      "decisoes": 5,
+      "linhas": 17
+    },
+    "stream_camera": {
+      "decisoes": 1,
+      "linhas": 3
+    }
+  },
+  "backend/app/routers/treino.py": {
+    "_executar": {
+      "decisoes": 2,
+      "linhas": 9
+    },
+    "iniciar_treino": {
+      "decisoes": 6,
+      "linhas": 19
+    },
+    "status_treino": {
+      "decisoes": 1,
+      "linhas": 2
+    },
+    "listar_experimentos": {
+      "decisoes": 5,
+      "linhas": 17
+    }
+  },
+  "backend/app/services/__init__.py": {},
+  "backend/app/services/annotation_converter.py": {
+    "labelme_json_to_yolo": {
+      "decisoes": 7,
+      "linhas": 34
+    },
+    "converter_labelme_para_yolo": {
+      "decisoes": 6,
+      "linhas": 11
+    }
+  },
+  "backend/app/services/annotation_paths.py": {
+    "preparar_anotacoes": {
+      "decisoes": 12,
+      "linhas": 28
+    }
+  },
+  "backend/app/services/camera_service.py": {
+    "gerador_de_frames": {
+      "decisoes": 12,
+      "linhas": 34
+    }
+  },
+  "backend/app/services/event_service.py": {
+    "_segmento_intercepta_caixa": {
+      "decisoes": 6,
+      "linhas": 18
+    },
+    "verificar_contato": {
+      "decisoes": 14,
+      "linhas": 17
+    },
+    "gerar_eventos": {
+      "decisoes": 6,
+      "linhas": 9
+    },
+    "_interpretar_movimento": {
+      "decisoes": 8,
+      "linhas": 16
+    },
+    "EventService.__init__": {
+      "decisoes": 1,
+      "linhas": 2
+    },
+    "EventService.reset": {
+      "decisoes": 1,
+      "linhas": 6
+    },
+    "EventService._atualizar_contato": {
+      "decisoes": 8,
+      "linhas": 20
+    },
+    "EventService.processar": {
+      "decisoes": 22,
+      "linhas": 49
+    },
+    "contact": {
+      "decisoes": 1,
+      "linhas": 3
+    }
+  },
+  "backend/app/services/hand_service.py": {
+    "HandService.__init__": {
+      "decisoes": 3,
+      "linhas": 18
+    },
+    "HandService.processar_frame": {
+      "decisoes": 7,
+      "linhas": 16
+    },
+    "HandService.close": {
+      "decisoes": 1,
+      "linhas": 2
+    }
+  },
+  "backend/app/services/interaction_overlay.py": {
+    "draw_interactions": {
+      "decisoes": 10,
+      "linhas": 22
+    }
+  },
+  "backend/app/services/model_service.py": {
+    "model_paths": {
+      "decisoes": 3,
+      "linhas": 6
+    },
+    "validate_weights": {
+      "decisoes": 6,
+      "linhas": 13
+    },
+    "publish_weights": {
+      "decisoes": 2,
+      "linhas": 18
+    },
+    "catalog": {
+      "decisoes": 3,
+      "linhas": 8
+    }
+  },
+  "backend/app/services/shared_camera.py": {
+    "SharedCamera.__init__": {
+      "decisoes": 1,
+      "linhas": 13
+    },
+    "SharedCamera.start": {
+      "decisoes": 3,
+      "linhas": 10
+    },
+    "SharedCamera.acquire": {
+      "decisoes": 1,
+      "linhas": 6
+    },
+    "SharedCamera.release": {
+      "decisoes": 2,
+      "linhas": 5
+    },
+    "SharedCamera._report": {
+      "decisoes": 1,
+      "linhas": 5
+    },
+    "SharedCamera._run": {
+      "decisoes": 5,
+      "linhas": 16
+    },
+    "SharedCamera.wait_frame": {
+      "decisoes": 8,
+      "linhas": 12
+    },
+    "SharedCamera.frames": {
+      "decisoes": 6,
+      "linhas": 16
+    },
+    "SharedCamera.status": {
+      "decisoes": 5,
+      "linhas": 9
+    },
+    "SharedCamera.close": {
+      "decisoes": 4,
+      "linhas": 11
+    }
+  },
+  "backend/app/services/tracking_service.py": {
+    "_area_caixa": {
+      "decisoes": 1,
+      "linhas": 5
+    },
+    "iou": {
+      "decisoes": 2,
+      "linhas": 7
+    },
+    "center": {
+      "decisoes": 1,
+      "linhas": 2
+    },
+    "ObjectTracker.__init__": {
+      "decisoes": 1,
+      "linhas": 4
+    },
+    "ObjectTracker.update": {
+      "decisoes": 14,
+      "linhas": 31
+    }
+  },
+  "backend/app/services/training_service.py": {
+    "_resolve_device": {
+      "decisoes": 2,
+      "linhas": 4
+    },
+    "_train_dataset": {
+      "decisoes": 1,
+      "linhas": 12
+    },
+    "rodar_pipeline_treinamento": {
+      "decisoes": 18,
+      "linhas": 74
+    }
+  },
+  "backend/app/services/vision_service.py": {
+    "VisionService.__init__": {
+      "decisoes": 8,
+      "linhas": 16
+    },
+    "VisionService.close": {
+      "decisoes": 2,
+      "linhas": 3
+    },
+    "VisionService.processar_frame": {
+      "decisoes": 8,
+      "linhas": 28
+    }
+  },
+  "backend/app/tests/conftest.py": {
+    "ambiente_temporario": {
+      "decisoes": 6,
+      "linhas": 29
+    }
+  },
+  "backend/app/tests/test_annotation_paths.py": {
+    "test_repara_apenas_caminho_e_preserva_anotacoes": {
+      "decisoes": 1,
+      "linhas": 13
+    },
+    "test_imagem_ausente_nao_altera_json": {
+      "decisoes": 1,
+      "linhas": 9
+    }
+  },
+  "backend/app/tests/test_api.py": {
+    "client": {
+      "decisoes": 1,
+      "linhas": 5
+    },
+    "test_health": {
+      "decisoes": 1,
+      "linhas": 4
+    },
+    "test_listar_eventos_vazio_ou_com_itens": {
+      "decisoes": 1,
+      "linhas": 4
+    },
+    "test_criar_evento_aparece_na_listagem": {
+      "decisoes": 2,
+      "linhas": 11
+    },
+    "test_websocket_eventos_recebe_broadcast": {
+      "decisoes": 1,
+      "linhas": 8
+    },
+    "test_listar_modelos_inclui_os_4_pretreinados": {
+      "decisoes": 2,
+      "linhas": 5
+    },
+    "test_status_treino_inicial_ocioso": {
+      "decisoes": 1,
+      "linhas": 4
+    },
+    "test_listar_experimentos_retorna_lista": {
+      "decisoes": 1,
+      "linhas": 5
+    },
+    "test_treino_start_com_modelo_inexistente_retorna_400": {
+      "decisoes": 1,
+      "linhas": 3
+    },
+    "test_listar_imagens_dataset": {
+      "decisoes": 1,
+      "linhas": 6
+    },
+    "test_obter_imagem_inexistente_404": {
+      "decisoes": 1,
+      "linhas": 3
+    },
+    "test_status_monitoramento_inicial": {
+      "decisoes": 1,
+      "linhas": 4
+    }
+  },
+  "backend/app/tests/test_capturar_frames.py": {
+    "test_deve_capturar_intervalo_nao_decorrido": {
+      "decisoes": 1,
+      "linhas": 2
+    },
+    "test_deve_capturar_intervalo_decorrido_exato": {
+      "decisoes": 1,
+      "linhas": 2
+    },
+    "test_deve_capturar_intervalo_excedido": {
+      "decisoes": 1,
+      "linhas": 2
+    },
+    "test_gerar_nome_arquivo_eh_unico_por_contador": {
+      "decisoes": 1,
+      "linhas": 6
+    },
+    "_frame_falso": {
+      "decisoes": 1,
+      "linhas": 2
+    },
+    "test_capturar_frames_respeita_max_frames_com_fonte_falsa": {
+      "decisoes": 4,
+      "linhas": 14
+    },
+    "test_capturar_frames_cria_pasta_saida_se_nao_existir": {
+      "decisoes": 1,
+      "linhas": 10
+    },
+    "test_capturar_frames_sem_max_frames_para_com_fonte_finita": {
+      "decisoes": 2,
+      "linhas": 10
+    }
+  },
+  "backend/app/tests/test_interactions.py": {
+    "box": {
+      "decisoes": 1,
+      "linhas": 2
+    },
+    "frame": {
+      "decisoes": 2,
+      "linhas": 2
+    },
+    "thresholds": {
+      "decisoes": 2,
+      "linhas": 7
+    },
+    "confirm": {
+      "decisoes": 1,
+      "linhas": 4
+    },
+    "test_three_products_and_no_repeated_events": {
+      "decisoes": 3,
+      "linhas": 9
+    },
+    "test_passing_a_then_touching_b": {
+      "decisoes": 2,
+      "linhas": 7
+    },
+    "test_release_allows_new_interaction": {
+      "decisoes": 1,
+      "linhas": 8
+    },
+    "test_missing_observations_do_not_count_as_contact": {
+      "decisoes": 1,
+      "linhas": 8
+    },
+    "test_slow_frames_and_camera_gap_do_not_confirm": {
+      "decisoes": 2,
+      "linhas": 10
+    },
+    "test_reordered_same_class_objects_keep_separate_ids": {
+      "decisoes": 1,
+      "linhas": 6
+    },
+    "test_two_hands_independent_pairs": {
+      "decisoes": 3,
+      "linhas": 6
+    },
+    "test_landmarks_reject_empty_part_of_hand_box": {
+      "decisoes": 1,
+      "linhas": 9
+    },
+    "test_finger_tip_and_segment_contact": {
+      "decisoes": 4,
+      "linhas": 9
+    },
+    "test_zero_area_and_no_overlap": {
+      "decisoes": 1,
+      "linhas": 3
+    },
+    "test_timestamp_rewind_starts_new_candidate": {
+      "decisoes": 1,
+      "linhas": 5
+    },
+    "test_api_preserves_hand_metadata": {
+      "decisoes": 2,
+      "linhas": 10
+    },
+    "test_joint_motion_is_manipulation_without_duplicate_event": {
+      "decisoes": 2,
+      "linhas": 9
+    },
+    "test_hand_motion_alone_is_not_manipulation": {
+      "decisoes": 2,
+      "linhas": 5
+    },
+    "test_vision_uses_same_timestamp_and_replaces_yolo_hand": {
+      "decisoes": 1,
+      "linhas": 35
+    }
+  },
+  "backend/app/tests/test_model_selection.py": {
+    "test_selection_resolves_both_paths": {
+      "decisoes": 1,
+      "linhas": 5
+    },
+    "test_unknown_model_rejected": {
+      "decisoes": 1,
+      "linhas": 3
+    },
+    "test_legacy_environment_cannot_override_paths": {
+      "decisoes": 1,
+      "linhas": 6
+    },
+    "test_catalog_and_benchmark_graphs": {
+      "decisoes": 7,
+      "linhas": 12
+    },
+    "test_training_cannot_choose_another_model": {
+      "decisoes": 3,
+      "linhas": 5
+    },
+    "test_bad_weights_do_not_replace_active_file": {
+      "decisoes": 1,
+      "linhas": 13
+    },
+    "test_successful_publication_and_copy_failure": {
+      "decisoes": 1,
+      "linhas": 14
+    },
+    "test_training_uses_actual_output_and_publishes_only_after_success": {
+      "decisoes": 2,
+      "linhas": 24
+    }
+  },
+  "backend/app/tests/test_protecao_refatoracao.py": {
+    "test_json_invalido_nao_cria_rotulo": {
+      "decisoes": 1,
+      "linhas": 6
+    },
+    "test_poligono_da_aplicacao_preserva_regra_historica": {
+      "decisoes": 1,
+      "linhas": 8
+    },
+    "test_reparo_valida_todos_os_arquivos_antes_de_gravar": {
+      "decisoes": 3,
+      "linhas": 11
+    },
+    "test_camera_descarta_imagem_antiga": {
+      "decisoes": 1,
+      "linhas": 8
+    },
+    "test_estado_limita_historico_e_remove_cliente_desconectado": {
+      "decisoes": 2,
+      "linhas": 17
+    },
+    "test_falha_da_visao_libera_consumidor": {
+      "decisoes": 1,
+      "linhas": 16
+    }
+  },
+  "backend/app/tests/test_shared_camera.py": {
+    "test_broadcast_uma_conexao_copias_e_consumidor_lento": {
+      "decisoes": 6,
+      "linhas": 22
+    },
+    "test_reconecta_fecha_respostas_e_decodifica_varios_jpegs": {
+      "decisoes": 3,
+      "linhas": 24
+    },
+    "test_stream_worker_captura_e_evento_ws_mesma_fonte": {
+      "decisoes": 6,
+      "linhas": 40
+    },
+    "test_parar_worker_sem_frames": {
+      "decisoes": 1,
+      "linhas": 16
+    },
+    "test_ultimo_consumidor_fecha_e_permite_reiniciar": {
+      "decisoes": 3,
+      "linhas": 22
+    },
+    "test_captura_libera_camera_ao_atingir_limite": {
+      "decisoes": 2,
+      "linhas": 10
+    },
+    "test_galeria_unicode_e_jpeg_completo": {
+      "decisoes": 2,
+      "linhas": 18
+    },
+    "test_stream_desconectado_libera_consumidor": {
+      "decisoes": 2,
+      "linhas": 16
+    }
+  },
+  "backend/app/tests/test_validacao_final.py": {
+    "test_eventos_mao_sobre_produto_e_frame_vazio": {
+      "decisoes": 1,
+      "linhas": 9
+    },
+    "test_iou_area_nula": {
+      "decisoes": 1,
+      "linhas": 3
+    },
+    "test_conversao_retangulo_invertido_e_classe_desconhecida": {
+      "decisoes": 1,
+      "linhas": 8
+    },
+    "test_conversao_dimensao_invalida_e_pasta_vazia": {
+      "decisoes": 1,
+      "linhas": 7
+    },
+    "test_frontend_e_galeria_coerentes_com_arquivos": {
+      "decisoes": 4,
+      "linhas": 10
+    }
+  },
+  "backend/app/worker.py": {
+    "_loop_monitoramento": {
+      "decisoes": 9,
+      "linhas": 55
+    },
+    "iniciar": {
+      "decisoes": 2,
+      "linhas": 11
+    },
+    "parar": {
+      "decisoes": 2,
+      "linhas": 6
+    },
+    "esta_rodando": {
+      "decisoes": 2,
+      "linhas": 2
+    },
+    "encerrar": {
+      "decisoes": 2,
+      "linhas": 4
+    }
+  },
+  "scripts/benchmark_tcc.py": {
+    "digest": {
+      "decisoes": 1,
+      "linhas": 2
+    },
+    "train_one": {
+      "decisoes": 2,
+      "linhas": 30
+    },
+    "main": {
+      "decisoes": 19,
+      "linhas": 81
+    }
+  },
+  "scripts/experimento_yolo26.py": {
+    "main": {
+      "decisoes": 3,
+      "linhas": 13
+    }
+  },
+  "scripts/relatorio_benchmark_tcc.py": {
+    "number": {
+      "decisoes": 1,
+      "linhas": 2
+    },
+    "table": {
+      "decisoes": 2,
+      "linhas": 2
+    },
+    "main": {
+      "decisoes": 14,
+      "linhas": 81
+    }
+  },
+  "scripts/replay_interactions.py": {
+    "evaluate": {
+      "decisoes": 6,
+      "linhas": 12
+    },
+    "main": {
+      "decisoes": 27,
+      "linhas": 73
+    }
+  },
+  "scripts/setup_hands.py": {
+    "main": {
+      "decisoes": 2,
+      "linhas": 13
+    }
+  },
+  "scripts/verificar_codigo.py": {
+    "medir_funcao": {
+      "decisoes": 5,
+      "linhas": 11
+    },
+    "inventariar": {
+      "decisoes": 9,
+      "linhas": 18
+    },
+    "verificar_espacos": {
+      "decisoes": 7,
+      "linhas": 10
+    },
+    "main": {
+      "decisoes": 10,
+      "linhas": 20
+    }
+  }
+}

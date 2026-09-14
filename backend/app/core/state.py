@@ -4,9 +4,9 @@ import threading
 from collections import deque
 
 
-class AppState:
+class EstadoAplicacao:
     def __init__(self, max_eventos=200):
-        self._lock = threading.Lock()
+        self._trava_eventos = threading.Lock()
         self._eventos = deque(maxlen=max_eventos)
         self.monitor_status = "parado"  # parado | rodando | erro
         self.monitor_erro = None
@@ -25,16 +25,16 @@ class AppState:
         self.main_loop = loop
 
     def adicionar_evento(self, evento):
-        with self._lock:
+        with self._trava_eventos:
             self._eventos.append(evento)
         if self.main_loop is not None:
-            asyncio.run_coroutine_threadsafe(self._broadcast(evento), self.main_loop)
+            asyncio.run_coroutine_threadsafe(self._distribuir_evento(evento), self.main_loop)
 
     def listar_eventos(self):
-        with self._lock:
+        with self._trava_eventos:
             return list(self._eventos)
 
-    async def _broadcast(self, evento):
+    async def _distribuir_evento(self, evento):
         mortos = []
         for ws in list(self.ws_clients):
             try:
@@ -44,5 +44,12 @@ class AppState:
         for ws in mortos:
             self.ws_clients.discard(ws)
 
+    # Compatibilidade com consumidores anteriores.
+    _broadcast = _distribuir_evento
 
-state = AppState()
+
+state = EstadoAplicacao()
+
+
+# Compatibilidade de importação com os nomes anteriores.
+AppState = EstadoAplicacao

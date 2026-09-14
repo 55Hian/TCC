@@ -5,45 +5,51 @@ import time
 
 from core.config import settings
 from services.hand_service import HAND_CONNECTIONS
-from services.tracking_service import ObjectTracker, center, iou
+from services.tracking_service import RastreadorObjetos, center, iou
 
 calcular_area_intersecao = iou
 
+JANELA_MOVIMENTO_SEGUNDOS = 0.6
+TOLERANCIA_TEMPO_SEGUNDOS = 1e-9
 
-def _segment_hits(a, b, box, margin):
+
+def _segmento_intercepta_caixa(a, b, caixa, margem):
     # Liang-Barsky: intersecao do segmento com o retangulo expandido.
-    low, high = 0.0, 1.0
+    inicio, fim = 0.0, 1.0
     dx, dy = b[0] - a[0], b[1] - a[1]
-    for p, q in ((-dx, a[0] - box["x_min"] + margin),
-                 (dx, box["x_max"] + margin - a[0]),
-                 (-dy, a[1] - box["y_min"] + margin),
-                 (dy, box["y_max"] + margin - a[1])):
+    for p, q in ((-dx, a[0] - caixa["x_min"] + margem),
+                 (dx, caixa["x_max"] + margem - a[0]),
+                 (-dy, a[1] - caixa["y_min"] + margem),
+                 (dy, caixa["y_max"] + margem - a[1])):
         if p == 0:
             if q < 0:
                 return False
         elif p < 0:
-            low = max(low, q / p)
+            inicio = max(inicio, q / p)
         else:
-            high = min(high, q / p)
-        if low > high:
+            fim = min(fim, q / p)
+        if inicio > fim:
             return False
     return True
 
 
-def contact(hand, product, active=False):
-    points = hand.get("landmarks")
-    if isinstance(points, (list, tuple)) and len(points) == 21:
-        scale = max(1.0, hypot(points[0][0] - points[9][0], points[0][1] - points[9][1]))
-        margin = settings.HAND_CONTACT_MARGIN * scale * (1.5 if active else 1)
-        nodes = [index for index, point in enumerate(points)
-                 if _segment_hits(point, point, product, margin)]
-        segments = [(a, b) for a, b in HAND_CONNECTIONS
-                    if _segment_hits(points[a], points[b], product, margin)]
-        palm = tuple(sum(points[i][axis] for i in (0, 5, 9, 13, 17)) / 5 for axis in (0, 1))
-        palm_hit = _segment_hits(palm, palm, product, margin)
-        return bool(nodes or segments or palm_hit), nodes, "landmarks"
-    threshold = settings.IOU_THRESHOLD * (0.7 if active else 1)
-    return iou(hand, product) >= threshold and iou(hand, product) > 0, [], "iou"
+def verificar_contato(mao, produto, confirmado=False):
+    """Verifica pontos e segmentos da mão; usa IoU quando não há landmarks."""
+    # Após a confirmação, a margem maior tolera pequenas oscilações da detecção.
+    pontos = mao.get("landmarks")
+    if isinstance(pontos, (list, tuple)) and len(pontos) == 21:
+        escala = max(1.0, hypot(pontos[0][0] - pontos[9][0], pontos[0][1] - pontos[9][1]))
+        margem = settings.HAND_CONTACT_MARGIN * escala * (1.5 if confirmado else 1)
+        indices_pontos = [indice for indice, ponto in enumerate(pontos)
+                 if _segmento_intercepta_caixa(ponto, ponto, produto, margem)]
+        segmentos = [(a, b) for a, b in HAND_CONNECTIONS
+                    if _segmento_intercepta_caixa(pontos[a], pontos[b], produto, margem)]
+        centro_palma = tuple(sum(pontos[i][eixo] for i in (0, 5, 9, 13, 17)) / 5 for eixo in (0, 1))
+        palma_em_contato = _segmento_intercepta_caixa(centro_palma, centro_palma, produto, margem)
+        return bool(indices_pontos or segmentos or palma_em_contato), indices_pontos, "landmarks"
+    limiar = settings.IOU_THRESHOLD * (0.7 if confirmado else 1)
+    sobreposicao = iou(mao, produto)
+    return sobreposicao >= limiar and sobreposicao > 0, [], "iou"
 
 
 def gerar_eventos(df_atual):
@@ -51,98 +57,124 @@ def gerar_eventos(df_atual):
 
     Monitoramento e CLI usam EventService. Esta funcao nao deve publicar eventos.
     """
-    records = df_atual.to_dict("records")
-    return [dict(tipo="interacao_mao", produto=product["classe"], quantidade=1)
-            for product in records if product["classe"] != "mao"
-            if any(contact(hand, product)[0] for hand in records if hand["classe"] == "mao")]
+    registros = df_atual.to_dict("records")
+    return [dict(tipo="interacao_mao", produto=produto["classe"], quantidade=1)
+            for produto in registros if produto["classe"] != "mao"
+            if any(verificar_contato(mao, produto)[0] for mao in registros if mao["classe"] == "mao")]
 
 
-def _interpretation(history, hand):
-    if len(history) < 3:
+def _interpretar_movimento(historico, mao):
+    """Distingue contato de deslocamento conjunto da mão e do produto."""
+    if len(historico) < 3:
         return "contato_provavel"
-    _, first_hand, first_product = history[0]
-    _, last_hand, last_product = history[-1]
-    hand_vector = tuple(b - a for a, b in zip(first_hand, last_hand))
-    product_vector = tuple(b - a for a, b in zip(first_product, last_product))
-    hand_distance, product_distance = hypot(*hand_vector), hypot(*product_vector)
-    scale = max(1.0, hypot(hand["x_max"] - hand["x_min"], hand["y_max"] - hand["y_min"]))
-    minimum = max(3.0, settings.INTERACTION_MOTION_MIN_RATIO * scale)
-    if min(hand_distance, product_distance) < minimum:
+    _, mao_inicial, produto_inicial = historico[0]
+    _, mao_final, produto_final = historico[-1]
+    vetor_mao = tuple(b - a for a, b in zip(mao_inicial, mao_final))
+    vetor_produto = tuple(b - a for a, b in zip(produto_inicial, produto_final))
+    deslocamento_mao, deslocamento_produto = hypot(*vetor_mao), hypot(*vetor_produto)
+    escala = max(1.0, hypot(mao["x_max"] - mao["x_min"], mao["y_max"] - mao["y_min"]))
+    minimo = max(3.0, settings.INTERACTION_MOTION_MIN_RATIO * escala)
+    if min(deslocamento_mao, deslocamento_produto) < minimo:
         return "contato_provavel"
-    cosine = sum(a * b for a, b in zip(hand_vector, product_vector)) / (hand_distance * product_distance)
-    ratio = min(hand_distance, product_distance) / max(hand_distance, product_distance)
-    return "manipulacao_provavel" if cosine >= 0.8 and ratio >= 0.5 else "contato_provavel"
+    cosseno = sum(a * b for a, b in zip(vetor_mao, vetor_produto)) / (deslocamento_mao * deslocamento_produto)
+    proporcao = min(deslocamento_mao, deslocamento_produto) / max(deslocamento_mao, deslocamento_produto)
+    return "manipulacao_provavel" if cosseno >= 0.8 and proporcao >= 0.5 else "contato_provavel"
 
 
-class EventService:
+class ServicoEventos:
     def __init__(self):
-        self.reset()
+        self.reiniciar()
 
-    def reset(self):
-        self.tracker = ObjectTracker(settings.INTERACTION_RELEASE_SECONDS)
+    def reiniciar(self):
+        self.tracker = RastreadorObjetos(settings.INTERACTION_RELEASE_SECONDS)
         self.pairs = {}
         self.last_timestamp = None
         self.detections = []
         self.diagnostics = []
 
+    def _atualizar_contato(self, par, mao, produto, timestamp):
+        """Acumula apenas contato contínuo e mantém uma janela curta de movimento."""
+        # Lacunas não contam como contato e reiniciam candidatos ainda não confirmados.
+        intervalo = timestamp - par["last_seen"]
+        if not par["confirmed"]:
+            if par["consecutive"] and intervalo <= settings.INTERACTION_MAX_GAP_SECONDS:
+                par["duration"] += intervalo
+            else:
+                par["duration"] = 0.0
+                par["samples"] = 0
+            par["samples"] += 1
+        if not par["consecutive"] or intervalo > settings.INTERACTION_MAX_GAP_SECONDS:
+            par["motion"].clear()
+        par["motion"].append((timestamp, center(mao), center(produto)))
+        while par["motion"] and timestamp - par["motion"][0][0] > JANELA_MOVIMENTO_SEGUNDOS:
+            par["motion"].popleft()
+        interpretacao = _interpretar_movimento(par["motion"], mao)
+        par["last_seen"] = timestamp
+        par["consecutive"] = True
+        return interpretacao
+
+    def _processar_par(self, mao, produto, timestamp, pares_observados, eventos):
+        """Atualiza um par e registra sua confirmação e diagnóstico."""
+        chave = (mao["track_id"], produto["track_id"])
+        par = self.pairs.get(chave)
+        confirmado = par is not None and par["confirmed"]
+        em_contato, indices_pontos, metodo = verificar_contato(mao, produto, confirmado)
+        if not em_contato:
+            return
+        pares_observados.add(chave)
+        if par is None:
+            par = dict(last_seen=timestamp, duration=0.0, samples=0, confirmed=False,
+                            consecutive=False, motion=deque(maxlen=120))
+            self.pairs[chave] = par
+        interpretacao = self._atualizar_contato(par, mao, produto, timestamp)
+        if (not par["confirmed"]
+                and par["duration"] + TOLERANCIA_TEMPO_SEGUNDOS >= settings.INTERACTION_CONFIRM_SECONDS
+                and par["samples"] >= settings.INTERACTION_MIN_SAMPLES):
+            # Um par confirmado só pode gerar outro evento depois de expirar.
+            par["confirmed"] = True
+            eventos.append(dict(
+                tipo="interacao_mao", produto=produto["classe"], quantidade=1,
+                mao_id=chave[0], produto_id=chave[1], pontos_mao=indices_pontos,
+                metodo=metodo, interpretacao=interpretacao,
+            ))
+        self.diagnostics.append(dict(
+            mao_id=chave[0], produto_id=chave[1], pontos_mao=indices_pontos,
+            interpretacao=interpretacao,
+            estado="confirmada" if par["confirmed"] else "candidata",
+        ))
+
     def processar(self, df_atual, timestamp=None):
+        """Rastreia pares mão-produto e emite um evento por contato confirmado."""
+        # Relógio regressivo ou pausa longa invalidam a continuidade da sessão.
         timestamp = time.monotonic() if timestamp is None else timestamp
         if self.last_timestamp is not None and (
                 timestamp <= self.last_timestamp or
                 timestamp - self.last_timestamp > settings.INTERACTION_RESET_SECONDS):
-            self.reset()
+            self.reiniciar()
         self.last_timestamp = timestamp
-        self.detections = self.tracker.update(df_atual.to_dict("records"), timestamp)
-        self.pairs = {key: value for key, value in self.pairs.items()
-                      if timestamp - value["last_seen"] <= settings.INTERACTION_RELEASE_SECONDS}
-        hands = [item for item in self.detections if item["classe"] == "mao"]
-        products = [item for item in self.detections if item["classe"] != "mao"]
-        events, seen = [], set()
+        self.detections = self.tracker.atualizar(df_atual.to_dict("records"), timestamp)
+        self.pairs = {chave: valor for chave, valor in self.pairs.items()
+                      if timestamp - valor["last_seen"] <= settings.INTERACTION_RELEASE_SECONDS}
+        maos = [item for item in self.detections if item["classe"] == "mao"]
+        produtos = [item for item in self.detections if item["classe"] != "mao"]
+        eventos, pares_observados = [], set()
         self.diagnostics = []
-        for hand in hands:
-            for product in products:
-                key = (hand["track_id"], product["track_id"])
-                previous = self.pairs.get(key)
-                active = previous is not None and previous["confirmed"]
-                hit, nodes, method = contact(hand, product, active)
-                if not hit:
-                    continue
-                seen.add(key)
-                if previous is None:
-                    previous = dict(last_seen=timestamp, duration=0.0, samples=0, confirmed=False,
-                                    consecutive=False, motion=deque(maxlen=120))
-                    self.pairs[key] = previous
-                delta = timestamp - previous["last_seen"]
-                if not previous["confirmed"]:
-                    if previous["consecutive"] and delta <= settings.INTERACTION_MAX_GAP_SECONDS:
-                        previous["duration"] += delta
-                    else:
-                        previous["duration"] = 0.0
-                        previous["samples"] = 0
-                    previous["samples"] += 1
-                if not previous["consecutive"] or delta > settings.INTERACTION_MAX_GAP_SECONDS:
-                    previous["motion"].clear()
-                previous["motion"].append((timestamp, center(hand), center(product)))
-                while previous["motion"] and timestamp - previous["motion"][0][0] > 0.6:
-                    previous["motion"].popleft()
-                interpretation = _interpretation(previous["motion"], hand)
-                previous["last_seen"] = timestamp
-                previous["consecutive"] = True
-                if (not previous["confirmed"]
-                        and previous["duration"] + 1e-9 >= settings.INTERACTION_CONFIRM_SECONDS
-                        and previous["samples"] >= settings.INTERACTION_MIN_SAMPLES):
-                    previous["confirmed"] = True
-                    events.append(dict(
-                        tipo="interacao_mao", produto=product["classe"], quantidade=1,
-                        mao_id=key[0], produto_id=key[1], pontos_mao=nodes,
-                        metodo=method, interpretacao=interpretation,
-                    ))
-                self.diagnostics.append(dict(
-                    mao_id=key[0], produto_id=key[1], pontos_mao=nodes,
-                    interpretacao=interpretation,
-                    estado="confirmada" if previous["confirmed"] else "candidata",
-                ))
-        for key, previous in self.pairs.items():
-            if key not in seen:
-                previous["consecutive"] = False
-        return events
+        for mao in maos:
+            for produto in produtos:
+                self._processar_par(mao, produto, timestamp, pares_observados, eventos)
+        for chave, par in self.pairs.items():
+            if chave not in pares_observados:
+                par["consecutive"] = False
+        return eventos
+
+    # Compatibilidade com consumidores anteriores.
+    reset = reiniciar
+
+
+def contact(hand, product, active=False):
+    """Mantém a assinatura usada por integrações anteriores."""
+    return verificar_contato(hand, product, active)
+
+
+# Compatibilidade de importação com os nomes anteriores.
+EventService = ServicoEventos

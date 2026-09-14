@@ -1,3 +1,4 @@
+"""Rotas de consulta, captura e abertura do LabelMe; trabalhos longos usam uma thread."""
 import os
 import subprocess
 import sys
@@ -12,6 +13,7 @@ from core.state import state
 from capturar_frames import capturar_frames
 from services.shared_camera import camera
 from services.annotation_paths import preparar_anotacoes
+from services.dataset_service import listar_imagens as listar_imagens_dataset, _extensao_valida
 
 router = APIRouter(prefix="/api/dataset", tags=["dataset"])
 
@@ -23,25 +25,9 @@ class CapturaEntrada(BaseModel):
     max_frames: int = 20
 
 
-def _extensao_valida(nome):
-    return nome.lower().endswith((".jpg", ".jpeg", ".png"))
-
-
 @router.get("/imagens")
 def listar_imagens():
-    pasta = settings.RAW_FRAMES_DIR
-    if not os.path.isdir(pasta):
-        return {"imagens": []}
-
-    imagens = []
-    for nome in sorted(os.listdir(pasta)):
-        caminho = os.path.join(pasta, nome)
-        if not _extensao_valida(nome) or not os.path.isfile(caminho):
-            continue
-        nome_base = os.path.splitext(nome)[0]
-        anotado = os.path.isfile(os.path.join(settings.LABELME_ANNOTATIONS_DIR, f"{nome_base}.json"))
-        imagens.append({"nome": nome, "anotado": anotado, "versao": str(os.stat(caminho).st_mtime_ns)})
-    return {"imagens": imagens}
+    return listar_imagens_dataset(settings.RAW_FRAMES_DIR, settings.LABELME_ANNOTATIONS_DIR)
 
 
 @router.get("/imagens/{nome}")
@@ -62,13 +48,13 @@ def _executar_captura(intervalo, max_frames):
             intervalo=intervalo,
             max_frames=max_frames,
             mostrar_janela=False,
-            fonte_frames=camera.frames(),
+            fonte_frames=camera.gerar_frames(),
         )
         state.captura_total = total
         state.captura_status = "concluido"
-    except Exception as exc:
+    except Exception as erro:
         state.captura_status = "erro"
-        state.captura_erro = str(exc)
+        state.captura_erro = str(erro)
 
 
 @router.post("/capturar")
@@ -101,6 +87,6 @@ def abrir_labelme():
         processo = subprocess.Popen(
             [sys.executable, "-m", "labelme", settings.RAW_FRAMES_DIR, "--output", settings.LABELME_ANNOTATIONS_DIR]
         )
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Falha ao abrir o LabelMe: {exc}")
+    except Exception as erro:
+        raise HTTPException(status_code=500, detail=f"Falha ao abrir o LabelMe: {erro}")
     return {"iniciado": True, "pid": processo.pid, "referencias_corrigidas": corrigidos}

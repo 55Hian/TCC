@@ -1,3 +1,4 @@
+"""Configuração do processo; campos em inglês preservam as variáveis de ambiente TCC_*."""
 from pathlib import Path
 from typing import Literal
 
@@ -11,7 +12,7 @@ BASE_DIR = Path(__file__).resolve().parents[3]
 MODELOS = ("yolov8n", "yolo12n", "yolo26s", "yolo26m")
 
 
-class Settings(BaseSettings):
+class Configuracoes(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=str(BASE_DIR / ".env"),
         env_file_encoding="utf-8",
@@ -78,4 +79,8 @@ class Settings(BaseSettings):
     EXTERNAL_VALIDATION_DATASET_YAML: str = str(BASE_DIR / "data" / "external_validation" / "data.yaml")
 
 
-settings = Settings()
+settings = Configuracoes()
+
+
+# Compatibilidade de importação com os nomes anteriores.
+Settings = Configuracoes

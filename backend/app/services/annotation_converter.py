@@ -1,43 +1,28 @@
+"""Conversão histórica LabelMe para YOLO, com saída normalizada por imagem."""
 import json
 import os
 
 from core.config import settings
 
 
-def labelme_json_to_yolo(json_path, output_dir, classes=None):
+def converter_arquivo_labelme(caminho_json, pasta_saida, classes=None):
     classes = classes or settings.CLASSES
-    with open(json_path, "r", encoding="utf-8") as handle:
-        data = json.load(handle)
+    with open(caminho_json, "r", encoding="utf-8") as arquivo:
+        dados = json.load(arquivo)
 
-    image_width = data.get("imageWidth", 1)
-    image_height = data.get("imageHeight", 1)
-    if image_width <= 0 or image_height <= 0:
-        raise ValueError(f"Dimensoes invalidas no arquivo LabelMe: {json_path}")
+    largura_imagem = dados.get("imageWidth", 1)
+    altura_imagem = dados.get("imageHeight", 1)
+    if largura_imagem <= 0 or altura_imagem <= 0:
+        raise ValueError(f"Dimensoes invalidas no arquivo LabelMe: {caminho_json}")
 
-    txt_lines = []
-    for shape in data.get("shapes", []):
-        label = shape.get("label")
-        if label not in classes:
-            continue
-        points = shape.get("points", [])
-        if len(points) < 2:
-            continue
+    linhas_yolo = _normalizar_formas(dados.get("shapes", []), largura_imagem, altura_imagem, classes)
 
-        x1, y1 = points[0]
-        x2, y2 = points[1]
-        cls_id = classes.index(label)
-        x_center = ((x1 + x2) / 2) / image_width
-        y_center = ((y1 + y2) / 2) / image_height
-        width = abs(x2 - x1) / image_width
-        height = abs(y2 - y1) / image_height
-        txt_lines.append(f"{cls_id} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}")
-
-    os.makedirs(output_dir, exist_ok=True)
-    nome_base = os.path.splitext(os.path.basename(json_path))[0]
-    output_path = os.path.join(output_dir, f"{nome_base}.txt")
-    with open(output_path, "w", encoding="utf-8") as handle:
-        handle.write("\n".join(txt_lines))
-    return output_path
+    os.makedirs(pasta_saida, exist_ok=True)
+    nome_base = os.path.splitext(os.path.basename(caminho_json))[0]
+    caminho_saida = os.path.join(pasta_saida, f"{nome_base}.txt")
+    with open(caminho_saida, "w", encoding="utf-8") as arquivo:
+        arquivo.write("\n".join(linhas_yolo))
+    return caminho_saida
 
 
 def converter_labelme_para_yolo(json_dir, output_dir, classes=None):
@@ -48,6 +33,34 @@ def converter_labelme_para_yolo(json_dir, output_dir, classes=None):
         raise FileNotFoundError("Nenhum arquivo JSON do LabelMe foi encontrado.")
 
     return [
-        labelme_json_to_yolo(os.path.join(json_dir, nome), output_dir, classes)
+        converter_arquivo_labelme(os.path.join(json_dir, nome), output_dir, classes)
         for nome in arquivos
     ]
+
+
+def _normalizar_formas(formas, largura_imagem, altura_imagem, classes):
+    """Mantém a regra histórica: os dois primeiros pontos definem a caixa."""
+    linhas_yolo = []
+    for forma in formas:
+        rotulo = forma.get("label")
+        if rotulo not in classes:
+            continue
+        pontos = forma.get("points", [])
+        if len(pontos) < 2:
+            continue
+
+        x1, y1 = pontos[0]
+        x2, y2 = pontos[1]
+        id_classe = classes.index(rotulo)
+        centro_x = ((x1 + x2) / 2) / largura_imagem
+        centro_y = ((y1 + y2) / 2) / altura_imagem
+        largura = abs(x2 - x1) / largura_imagem
+        altura = abs(y2 - y1) / altura_imagem
+        linhas_yolo.append(f"{id_classe} {centro_x:.6f} {centro_y:.6f} {largura:.6f} {altura:.6f}")
+    return linhas_yolo
+
+
+# Compatibilidade de importação com os nomes anteriores.
+def labelme_json_to_yolo(json_path, output_dir, classes=None):
+    """Aceita os parâmetros nomeados da interface anterior."""
+    return converter_arquivo_labelme(json_path, output_dir, classes)

@@ -1,6 +1,6 @@
 # Manual Técnico
 
-Referência do código atual do **Controle Autônomo de Inventário**, revisada em 08/09/2026. Este documento explica a implementação existente; o [Manual de Uso](MANUAL_DE_USO.md) reúne instalação, interface, comandos e configuração. Caminhos relativos partem da raiz do repositório.
+Referência do código atual do **Controle Autônomo de Inventário**, revisada em 13/09/2026. Este documento explica a implementação existente; o [Manual de Uso](MANUAL_DE_USO.md) reúne instalação, interface, comandos e configuração. Caminhos relativos partem da raiz do repositório.
 
 ## Sumário
 
@@ -48,13 +48,13 @@ Os `__init__.py` marcam os pacotes; não executam o monitoramento. Os imports us
 ```mermaid
 flowchart TD
     ESP[ESP32-CAM / MJPEG] --> READ[camera_service: leitura e JPEG]
-    READ --> SHARED[SharedCamera: último frame por processo]
+    READ --> SHARED[CameraCompartilhada: último frame por processo]
     SHARED --> STREAM[router stream: MJPEG]
     STREAM --> WEB[Navegador]
     SHARED --> WORK[worker]
-    WORK --> VIS[VisionService: YOLO + HandService]
-    VIS --> EVENTS[EventService: tracking + geometria + tempo]
-    EVENTS --> STATE[AppState]
+    WORK --> VIS[ServicoVisao: YOLO + ServicoMaos]
+    VIS --> EVENTS[ServicoEventos: tracking + geometria + tempo]
+    EVENTS --> STATE[EstadoAplicacao]
     STATE --> WS[WebSocket]
     WS --> WEB
     SHARED --> CAP[capturar_frames]
@@ -89,7 +89,7 @@ A CLI abre seu próprio leitor de câmera. A conexão compartilhada do backend �
 | `experiments/benchmarks/` | Dados congelados, métricas e pesos comparativos | Benchmark |
 | `experiments/diagnosticos/` | Capturas auxiliares de investigação, quando existentes | Diagnóstico manual |
 
-Os eventos e estados de tarefas não são persistidos. `AppState` guarda no máximo 200 eventos no backend; reiniciar o processo limpa essa memória. Os arquivos de modelos, datasets e experimentos permanecem no disco.
+Os eventos e estados de tarefas não são persistidos. `EstadoAplicacao` guarda no máximo 200 eventos no backend; reiniciar o processo limpa essa memória. Os arquivos de modelos, datasets e experimentos permanecem no disco.
 
 ## 2. Inicialização e configuração
 
@@ -97,7 +97,7 @@ Os eventos e estados de tarefas não são persistidos. `AppState` guarda no máx
 
 `app = FastAPI(lifespan=lifespan)` cria a aplicação. São registrados os routers de dataset, eventos, stream, modelos e treino; o router WebSocket é incluído separadamente.
 
-`lifespan(app)` registra o event loop em `state.registrar_loop()` antes de atender clientes. Ao encerrar, chama `worker.encerrar()` e `camera.close()` por `asyncio.to_thread`, depois remove a referência ao loop. Não inicia YOLO nem abre a câmera durante o simples import.
+`lifespan(app)` registra o event loop em `state.registrar_loop()` antes de atender clientes. Ao encerrar, chama `worker.encerrar()` e `camera.fechar()` por `asyncio.to_thread`, depois remove a referência ao loop. Não inicia YOLO nem abre a câmera durante o simples import.
 
 `health()` devolve `{"status":"ok"}`. É uma verificação da API, não um teste da câmera, GPU ou dos pesos.
 
@@ -109,19 +109,19 @@ As montagens estáticas vêm depois das rotas:
 
 Os diretórios de experimentos usam `check_dir=False`: a aplicação pode ser criada antes de eles existirem; uma requisição a arquivos inexistentes não passa a produzir gráficos automaticamente.
 
-### 2.2 Settings e seleção única
+### 2.2 Configuracoes e seleção única
 
-`BASE_DIR` é calculado por `Path(__file__).resolve().parents[3]`, não pelo diretório atual do terminal. `Settings(BaseSettings)` usa `.env` da raiz em UTF-8, prefixo `TCC_` e ignora entradas extras. A prioridade usual aqui é: valor passado ao construtor, variável do ambiente, `.env`, padrão do código.
+`BASE_DIR` é calculado por `Path(__file__).resolve().parents[3]`, não pelo diretório atual do terminal. `Configuracoes(BaseSettings)` usa `.env` da raiz em UTF-8, prefixo `TCC_` e ignora entradas extras. A prioridade usual aqui é: valor passado ao construtor, variável do ambiente, `.env`, padrão do código.
 
-`settings = Settings()` é instanciado no import. Editar o arquivo ou o `.env` não altera instâncias já carregadas: reinicie o processo.
+`settings = Configuracoes()` é instanciado no import. Editar o arquivo ou o `.env` não altera instâncias já carregadas: reinicie o processo.
 
 `MODELOS` contém `yolov8n`, `yolo12n`, `yolo26s` e `yolo26m`. `MODELO_ATIVO` é um `Literal` dessas opções, com padrão atual `yolo12n`. São propriedades calculadas:
 
 | Propriedade/método | Cálculo | Uso |
 |---|---|---|
-| `Settings.BASE_MODEL` | `PRETRAINED_MODELS_DIR / (MODELO_ATIVO + ".pt")` | Modelo de partida de um treino novo |
-| `Settings.MODEL_PATH` | `TRAINED_MODELS_DIR / MODELO_ATIVO / "best.pt"` | Pesos de inferência |
-| `Settings.TRAINING_NAME` | `MODELO_ATIVO` | Nome lógico; o treino real acrescenta identificador único |
+| `Configuracoes.BASE_MODEL` | `PRETRAINED_MODELS_DIR / (MODELO_ATIVO + ".pt")` | Modelo de partida de um treino novo |
+| `Configuracoes.MODEL_PATH` | `TRAINED_MODELS_DIR / MODELO_ATIVO / "best.pt"` | Pesos de inferência |
+| `Configuracoes.TRAINING_NAME` | `MODELO_ATIVO` | Nome lógico; o treino real acrescenta identificador único |
 
 Essas três propriedades não são campos de configuração independentes. `TCC_BASE_MODEL` e `TCC_MODEL_PATH` antigos não substituem o caminho calculado. Os diretórios continuam configuráveis.
 
@@ -143,9 +143,9 @@ Gerador de imagens BGR NumPy. Recebe URL, evento opcional de parada e callback o
 
 Não interpreta todos os cabeçalhos multipart: extrai JPEGs pelos marcadores. Reconecta continuamente até a parada, em vez de propagar cada erro de rede ao consumidor.
 
-### 3.2 SharedCamera
+### 3.2 CameraCompartilhada
 
-[shared_camera.py](../backend/app/services/shared_camera.py) instancia `camera = SharedCamera(settings.ESP32_STREAM_URL)`. Seus recursos são: `RLock` de ciclo de vida, `Condition` para disponibilização de frames, `Event` de parada, mapa de consumidores, thread leitora, último frame, sequência, instante monotônico de recebimento, status e erro.
+[shared_camera.py](../backend/app/services/shared_camera.py) instancia `camera = CameraCompartilhada(settings.ESP32_STREAM_URL)`. Seus recursos são: `RLock` de ciclo de vida, `Condition` para disponibilização de frames, `Event` de parada, mapa de consumidores, thread leitora, último frame, sequência, instante monotônico de recebimento, status e erro.
 
 | Método | Entrada/retorno | Como funciona e efeitos |
 |---|---|---|
@@ -176,7 +176,7 @@ O backend injeta `camera.frames()` e `mostrar_janela=False`. A captura não roda
 
 ## 4. Visão, mãos e rastreamento
 
-### 4.1 VisionService
+### 4.1 ServicoVisao
 
 [vision_service.py](../backend/app/services/vision_service.py) une duas inferências sincronizadas.
 
@@ -186,7 +186,7 @@ O backend injeta `camera.frames()` e `mostrar_janela=False`. A captura não roda
 2. Carrega `YOLO`, lê `model.names` e exige igualdade dos IDs/nomes com `CLASSES` ou `EXTERNAL_CLASSES`, conforme o modo.
 3. Registra e imprime nome/caminho. O caminho explícito é usado pelo replay; não altera o modelo ativo global.
 4. Faz aquecimento com imagem preta de 480×640.
-5. Cria `HandService` quando habilitado.
+5. Cria `ServicoMaos` quando habilitado.
 
 `device` explícito é encaminhado à predição. O monitor normal não passa um dispositivo: usa a seleção do Ultralytics. A arquitetura dos pesos é validada na publicação; este construtor verifica arquivo e classes.
 
@@ -195,7 +195,7 @@ O backend injeta `camera.frames()` e `mostrar_janela=False`. A captura não roda
 - Usa o timestamp fornecido ou `time.monotonic()`.
 - Executa YOLO no frame BGR, seleciona o primeiro resultado e lê `xyxy`, `cls` e `conf`.
 - Descarta IDs fora do conjunto e, com MediaPipe ativo, descarta caixas YOLO da classe `mao`.
-- Acrescenta as mãos produzidas por `HandService` no mesmo frame/timestamp.
+- Acrescenta as mãos produzidas por `ServicoMaos` no mesmo frame/timestamp.
 - Retorna DataFrame de detecções; grava o timestamp em `df.attrs["timestamp"]`.
 
 Uma linha de produto contém `classe`, `confianca`, `x_min`, `y_min`, `x_max`, `y_max`. Uma linha de mão do MediaPipe também contém `landmarks`, lista de 21 pares `(x,y)` em pixels. O MediaPipe não fornece aqui o mesmo score das caixas YOLO; a coluna `confianca` pode ficar NaN nessa linha. Sem detecções, o DataFrame pode não ter colunas.
@@ -204,7 +204,7 @@ A predição não define `conf`, `imgsz` ou IoU de NMS explicitamente. Não conf
 
 `close()` fecha o detector de mãos, se criado.
 
-### 4.2 HandService
+### 4.2 ServicoMaos
 
 [hand_service.py](../backend/app/services/hand_service.py):
 
@@ -215,13 +215,13 @@ A predição não define `conf`, `imgsz` ou IoU de NMS explicitamente. Não conf
 
 Índices: punho 0; polegar 1–4; indicador 5–8; médio 9–12; anelar 13–16; mínimo 17–20. As pontas são 4, 8, 12, 16 e 20. Esta implementação usa x/y; não usa z nem lateralidade para determinar contato/identidade. O tracking interno do MediaPipe não é o identificador `mao_id` da aplicação.
 
-### 4.3 ObjectTracker e geometria básica
+### 4.3 RastreadorObjetos e geometria básica
 
 [tracking_service.py](../backend/app/services/tracking_service.py):
 
 - `iou(a,b)`: calcula interseção das caixas, áreas não negativas e união. Retorna interseção/união, ou zero para união nula.
 - `center(box)`: devolve o ponto médio da caixa.
-- `ObjectTracker.__init__(ttl=0.6)`: inicia dicionário de tracks e contador de IDs em 1.
+- `RastreadorObjetos.__init__(ttl=0.6)`: inicia dicionário de tracks e contador de IDs em 1.
 - `update(detections,timestamp)`: expira tracks cuja última observação excedeu TTL. Só compara objetos da mesma classe. Para cada par, calcula IoU e distância entre centros dividida pela diagonal da caixa anterior. Aceita candidato com IoU ≥ 0,1 **ou** distância normalizada ≤ 0,5. Ordena por `IoU - distância`, atribui pares de modo guloso e um a um, cria IDs para os restantes e devolve cópias com `track_id`.
 
 O tracker é espacial simples, não ByteTrack, não usa embeddings nem previsão de velocidade. Duas unidades próximas da mesma classe podem trocar IDs. Todos os tipos de objetos compartilham o contador, mas a associação é restrita à classe. Objetos temporariamente perdidos permanecem no dicionário até TTL, porém não são inventados na saída do frame sem detecção.
@@ -234,7 +234,7 @@ O tracker é espacial simples, não ByteTrack, não usa embeddings nem previsão
 
 `calcular_area_intersecao` é alias de `iou`, mantido por compatibilidade; retorna uma proporção, não pixels quadrados.
 
-`_segment_hits(a,b,box,margin)` implementa Liang–Barsky. Representa o segmento por um parâmetro entre 0 e 1 e restringe esse intervalo contra as quatro bordas da caixa expandida. Intervalo vazio significa ausência de interseção. Segmento de comprimento zero permite testar um ponto.
+`_segmento_intercepta_caixa(a,b,box,margin)` implementa Liang–Barsky. Representa o segmento por um parâmetro entre 0 e 1 e restringe esse intervalo contra as quatro bordas da caixa expandida. Intervalo vazio significa ausência de interseção. Segmento de comprimento zero permite testar um ponto.
 
 `contact(hand,product,active=False)` retorna `(hit,nodes,method)`:
 
@@ -245,13 +245,13 @@ O tracker é espacial simples, não ByteTrack, não usa embeddings nem previsão
 
 A escala da margem é a distância entre pontos 0 e 9, com mínimo de 1 pixel. A margem padrão é 8% dessa escala. Centro da palma é a média de 0, 5, 9, 13 e 17. `nodes` contém apenas os pontos dentro da região: pode ficar vazio quando o contato foi por segmento/centro. `method` vale `landmarks` ou `iou`.
 
-Com MediaPipe ativo, VisionService remove caixas YOLO de mão. Se MediaPipe não encontrar a mão, não há fallback automático para aquela caixa.
+Com MediaPipe ativo, ServicoVisao remove caixas YOLO de mão. Se MediaPipe não encontrar a mão, não há fallback automático para aquela caixa.
 
-`gerar_eventos(df_atual)` é função legada sem memória. Retorna um candidato por produto com pelo menos uma mão em contato, no formato antigo de três campos. Não publica nem confirma temporalmente; worker e CLI usam EventService.
+`gerar_eventos(df_atual)` é função legada sem memória. Retorna um candidato por produto com pelo menos uma mão em contato, no formato antigo de três campos. Não publica nem confirma temporalmente; worker e CLI usam ServicoEventos.
 
 ### 5.2 Movimento conjunto
 
-`_interpretation(history,hand)` compara centros da primeira e última observações:
+`_interpretar_movimento(history,hand)` compara centros da primeira e última observações:
 
 1. Menos de três observações → contato provável.
 2. Calcula vetores de deslocamento da mão e produto.
@@ -261,9 +261,9 @@ Com MediaPipe ativo, VisionService remove caixas YOLO de mão. Se MediaPipe não
 
 É heurística na imagem, não reconhecimento treinado de pegada. Movimento da câmera, caixas instáveis e troca de IDs podem afetar a interpretação. Não determina retirada.
 
-### 5.3 EventService
+### 5.3 ServicoEventos
 
-`__init__()` chama `reset()`. Este cria ObjectTracker com TTL igual a INTERACTION_RELEASE_SECONDS e limpa pares, timestamp anterior, detecções e diagnósticos.
+`__init__()` chama `reset()`. Este cria RastreadorObjetos com TTL igual a INTERACTION_RELEASE_SECONDS e limpa pares, timestamp anterior, detecções e diagnósticos.
 
 `processar(df_atual,timestamp=None)` devolve somente novos eventos confirmados. O tempo padrão é monotônico; replay fornece tempo do vídeo.
 
@@ -310,19 +310,19 @@ Uma ausência observada interrompe a acumulação da candidata antes mesmo de ex
 
 O worker acrescenta timestamp UTC ISO 8601. A interpretação publicada é a do momento da confirmação; alterações posteriores só atualizam diagnóstico. Duas mãos no mesmo produto podem gerar dois eventos, um por par. Quantidade 1 não é contagem de estoque.
 
-`diagnostics` contém mao_id, produto_id, pontos_mao, interpretacao e estado (candidata/confirmada). `detections` contém as detecções atuais com IDs. Não há rota própria que exponha todo o histórico local do EventService.
+`diagnostics` contém mao_id, produto_id, pontos_mao, interpretacao e estado (candidata/confirmada). `detections` contém as detecções atuais com IDs. Não há rota própria que exponha todo o histórico local do ServicoEventos.
 
 ### 5.5 Overlay
 
-`draw_interactions(frame,events)`, em [interaction_overlay.py](../backend/app/services/interaction_overlay.py), copia o frame, desenha caixas/IDs e marca produtos confirmados em verde. Desenha conexões, os 21 pontos numerados e linhas de texto com pares/estado/interpretação.
+`desenhar_interacoes(imagem, eventos)`, em [interaction_overlay.py](../backend/app/services/interaction_overlay.py), copia o frame, desenha caixas/IDs e marca produtos confirmados em verde. Desenha conexões, os 21 pontos numerados e linhas de texto com pares/estado/interpretação.
 
-CLI e replay usam o overlay. MJPEG do navegador mostra a câmera sem essas marcas. No baseline do replay, EventService não é processado; o overlay não mostra as caixas da regra antiga.
+CLI e replay usam o overlay. MJPEG do navegador mostra a câmera sem essas marcas. No baseline do replay, ServicoEventos não é processado; o overlay não mostra as caixas da regra antiga.
 
 ## 6. Worker, CLI e distribuição de eventos
 
 ### 6.1 Worker
 
-[worker.py](../backend/app/worker.py) mantém _thread e _stop_flag.
+[worker.py](../backend/app/worker.py) mantém _tarefa_monitoramento e _sinal_parada.
 
 | Função | Comportamento |
 |---|---|
@@ -332,13 +332,13 @@ CLI e replay usam o overlay. MJPEG do navegador mostra a câmera sem essas marca
 | `esta_rodando()` | Consulta existência e estado da thread |
 | `encerrar()` | Solicita parada e aguarda até 5 s |
 
-wait_frame(sequence) evita reprocessar a mesma sequência. Sem frame, status aguardando_camera; com frame, rodando. A inferência só ocorre após INTERVALO_PROCESSAMENTO desde o início da última. O mínimo de 0,05 s não garante 20 FPS.
+aguardar_frame(sequence) evita reprocessar a mesma sequência. Sem frame, status aguardando_camera; com frame, rodando. A inferência só ocorre após INTERVALO_PROCESSAMENTO desde o início da última. O mínimo de 0,05 s não garante 20 FPS.
 
-O timestamp do DataFrame alimenta EventService. O evento recebe datetime UTC; state.ultimo_processamento recebe tempo monotônico ao terminar. Falhas de inicialização/processamento definem erro e mensagem. Finalmente, fecha visão e libera token da câmera; a parada normal define parado.
+O timestamp do DataFrame alimenta ServicoEventos. O evento recebe datetime UTC; state.ultimo_processamento recebe tempo monotônico ao terminar. Falhas de inicialização/processamento definem erro e mensagem. Finalmente, fecha visão e libera token da câmera; a parada normal define parado.
 
 monitor_modelo/monitor_pesos registram a última carga bem-sucedida e não são zerados automaticamente ao parar. Devem ser interpretados junto ao status. A API também informa modelo_configurado.
 
-### 6.2 AppState
+### 6.2 EstadoAplicacao
 
 [core/state.py](../backend/app/core/state.py):
 
@@ -346,17 +346,17 @@ monitor_modelo/monitor_pesos registram a última carga bem-sucedida e não são 
 |---|---|
 | `__init__(max_eventos=200)` | Cria deque limitada, lock, estados de monitor/treino/captura e conjunto de clientes |
 | `registrar_loop(loop)` | Guarda loop FastAPI para publicação a partir de threads |
-| `adicionar_evento(evento)` | Acrescenta sob lock e agenda _broadcast com run_coroutine_threadsafe quando há loop |
+| `adicionar_evento(evento)` | Acrescenta sob lock e agenda _distribuir_evento com run_coroutine_threadsafe quando há loop |
 | `listar_eventos()` | Retorna lista sob lock |
-| `_broadcast(evento)` | Envia JSON a cópia dos clientes; remove conexões que falharem |
+| `_distribuir_evento(evento)` | Envia JSON a cópia dos clientes; remove conexões que falharem |
 
 O lock protege o deque. Demais status são atributos simples. Não há persistência, paginação, autenticação, fila durável ou garantia de reenvio.
 
 ### 6.3 CLI e controller
 
-`cli_monitor.main()` ajusta imports, cria VisionService/EventService e abre gerador_de_frames diretamente. Usa a mesma regra temporal e desenha overlay. Frames fora do intervalo são mostrados sem novas marcações. Q encerra; finally fecha fonte, mãos e janelas.
+`cli_monitor.main()` ajusta imports, cria ServicoVisao/ServicoEventos e abre gerador_de_frames diretamente. Usa a mesma regra temporal e desenha overlay. Frames fora do intervalo são mostrados sem novas marcações. Q encerra; finally fecha fonte, mãos e janelas.
 
-`enviar_eventos(lista_eventos)`, em [api_controller.py](../backend/app/controllers/api_controller.py), ignora lista vazia, acrescenta timestamp local e imprime mensagem. **requests.post e raise_for_status estão comentados no código atual.** A mensagem “Evento enviado” não comprova transmissão; a CLI não alimenta API/WebSocket nesse estado.
+`enviar_eventos(lista_eventos)`, em [api_controller.py](../backend/app/controllers/api_controller.py), ignora lista vazia, acrescenta timestamp local e imprime mensagem. **A publicação HTTP está desativada; o código executa apenas a saída no console.** A mensagem “Evento enviado” não comprova transmissão; a CLI não alimenta API/WebSocket nesse estado.
 
 API_ENDPOINT é o destino previsto, mas não chamado atualmente. O worker não usa esse controller: chama state.adicionar_evento diretamente.
 
@@ -377,7 +377,7 @@ Preserva as anotações e a formatação restante. A validação é prévia, mas
 
 ### 7.2 Conversão padrão
 
-`labelme_json_to_yolo(json_path,output_dir,classes=None)`, em [annotation_converter.py](../backend/app/services/annotation_converter.py), exige dimensões positivas, ignora classes desconhecidas e shapes com menos de dois pontos.
+`converter_arquivo_labelme(caminho_json, pasta_saida, classes=None)`, em [annotation_converter.py](../backend/app/services/annotation_converter.py), exige dimensões positivas, ignora classes desconhecidas e shapes com menos de dois pontos.
 
 **Usa somente os dois primeiros pontos, independentemente do shape_type.** Por isso o fluxo padrão deve usar retângulos; não suporta corretamente polígonos arbitrários como caixas envolventes.
 
@@ -397,7 +397,7 @@ Grava id, xc, yc, largura, altura com seis casas decimais em nome_base.txt e ret
 
 ### 7.3 training_service
 
-`_resolve_device()` retorna (0,nome_GPU) se CUDA disponível; caso contrário, ("cpu","CPU").
+`_resolver_dispositivo()` retorna (0,nome_GPU) se CUDA disponível; caso contrário, ("cpu","CPU").
 
 `rodar_pipeline_treinamento(pasta_fotos=None,pasta_json=None,pasta_yolo=None,pasta_dataset=None,base_model=None,epochs=50,imgsz=640,fraction=1.0)`:
 
@@ -405,13 +405,13 @@ Grava id, xc, yc, largura, altura com seis casas decimais em nome_base.txt e ret
 2. Em modo externo, treina diretamente com EXTERNAL_VALIDATION_DATASET_YAML, sem converter/dividir o dataset próprio.
 3. Em modo próprio, exige JSONs, converte e cria images/labels com splits train/val.
 4. Lista imagens JPG/JPEG/PNG com TXT correspondente e exige pares.
-5. Aplica random.seed(42), embaralha e divide em int(total×0.8).
+5. Usa random.Random(42) local, embaralha e divide em int(total×0.8).
 6. Copia pares e grava data.yaml com caminho absoluto, splits e nomes.
-7. Chama _train_dataset e retorna seu resultado.
+7. Chama _treinar_dataset e retorna seu resultado.
 
 A lista inicial usa os.listdir sem ordenação; a semente não garante a mesma divisão se a ordem de entrada mudar. O pipeline não limpa splits antigos, não detecta duplicatas e não separa por sessão. Arquivos residuais podem persistir; datasets minúsculos podem gerar split vazio.
 
-`_train_dataset(data,base_model,epochs,imgsz,fraction)` captura MODELO_ATIVO, escolhe dispositivo, cria YOLO e chama train com parâmetros recebidos, TRAINING_PROJECT e nome <modelo>_<uuid12>. Obtém model.trainer.save_dir real, publica weights/best.pt e retorna:
+`_treinar_dataset(dados, base_model, epochs, imgsz, fraction)` captura MODELO_ATIVO, escolhe dispositivo, cria YOLO e chama train com parâmetros recebidos, TRAINING_PROJECT e nome <modelo>_<uuid12>. Obtém model.trainer.save_dir real, publica weights/best.pt e retorna:
 
 ```json
 {"modelo":"yolo12n","experimento":".../experiments/runs/yolo12n_<id>","pesos":".../models/trained/yolo12n/best.pt"}
@@ -433,10 +433,10 @@ Não há cancelamento HTTP nem progresso por época. A proteção é local ao pr
 
 | Função | Contrato |
 |---|---|
-| `model_paths(name=None)` | Usa nome explícito/ativo, valida contra MODELOS e retorna Path genérico e treinado |
-| `validate_weights(path,name,expected_classes=None)` | Exige arquivo, carrega YOLO, valida IDs/nomes exatos e origem em ckpt.train_args.model; devolve modelo |
-| `publish_weights(source,name)` | Valida, cria temporário junto ao destino, copia, compara SHA-256, substitui best.pt e limpa temporário; retorna caminho |
-| `catalog()` | Lista quatro opções com nome, base_model, model_path, disponivel e em_uso |
+| `caminhos_modelo(nome=None)` | Usa nome explícito/ativo, valida contra MODELOS e retorna Path genérico e treinado |
+| `validar_pesos(caminho, nome, classes_esperadas=None)` | Exige arquivo, carrega YOLO, valida IDs/nomes exatos e origem em ckpt.train_args.model; devolve modelo |
+| `publicar_pesos(origem, nome)` | Valida, cria temporário junto ao destino, copia, compara SHA-256, substitui best.pt e limpa temporário; retorna caminho |
+| `listar_catalogo()` | Lista quatro opções com nome, base_model, model_path, disponivel e em_uso |
 
 Classes esperadas são as do modo próprio/externo, salvo argumento explícito. A arquitetura é conferida pelo stem do caminho de origem nos metadados, normalizando barras; não por inspeção estrutural completa das camadas.
 
@@ -534,7 +534,7 @@ Valores são ilustrativos: modelo_carregado/pesos_carregados podem conservar a �
 
 ### 9.4 WebSocket
 
-`ws_eventos(websocket)` aceita conexão, inclui cliente em state.ws_clients e aguarda mensagens para manter a sessão. O conteúdo recebido é ignorado. Em WebSocketDisconnect/finally remove o cliente. A aplicação envia eventos por AppState._broadcast; não há mensagens periódicas próprias de heartbeat, confirmação de entrega ou replay automático no socket.
+`ws_eventos(websocket)` aceita conexão, inclui cliente em state.ws_clients e aguarda mensagens para manter a sessão. O conteúdo recebido é ignorado. Em WebSocketDisconnect/finally remove o cliente. A aplicação envia eventos por EstadoAplicacao._distribuir_evento; não há mensagens periódicas próprias de heartbeat, confirmação de entrega ou replay automático no socket.
 
 O frontend consulta o histórico por HTTP e abre WebSocket para eventos futuros. Há uma janela entre essas duas ações; o protocolo não oferece cursor para reconciliar eventos perdidos/duplicados.
 
@@ -543,7 +543,7 @@ O frontend consulta o histórico por HTTP e abre WebSocket para eventos futuros.
 listar_modelos retorna:
 
 - modelo_ativo: nome selecionado.
-- modelos: quatro entradas de catalog().
+- modelos: quatro entradas de listar_catalogo().
 - pretreinados: nome de arquivo, caminho, tamanho_mb e em_uso.
 - treinados: experimento (nome da arquitetura), caminho, tamanho_mb, em_uso e disponivel.
 
@@ -575,8 +575,8 @@ LabelMe aparece no computador do backend, não na máquina de um navegador remot
 
 | Arquivo/símbolo | Comportamento |
 |---|---|
-| api.js / `apiGet(path)` | fetch GET; lança erro se status não-ok; devolve JSON |
-| api.js / `apiPost(path,body)` | Serializa corpo se informado, POST JSON; usa detail da resposta no erro quando disponível |
+| api.js / `obterJson(caminho)` | fetch GET; lança erro se status não-ok; devolve JSON |
+| api.js / `enviarJson(caminho, corpo)` | Serializa corpo se informado, POST JSON; usa detail da resposta no erro quando disponível |
 | tabs.js / handlers de clique | Remove active de botões/seções e ativa a seção indicada pelo data-tab; não controla tarefas backend |
 | dashboard.js / `adicionarEventoNaLista(evento)` | Cria li com horário local, tipo, produto e quantidade; não mostra todos os metadados |
 | dashboard.js / `carregarEventosIniciais()` | GET eventos e adiciona ao DOM |
@@ -612,40 +612,40 @@ Não aceita mais os antigos argumentos posicionais para arquitetura, nome, batch
 
 ### 11.3 replay_interactions.py
 
-`main()` recebe vídeo e --output obrigatório. Recusa JSON/vídeo de saída existentes; abre VideoCapture e exige FPS positivo. Cria VisionService com --weights/--device opcionais.
+`main()` recebe vídeo e --output obrigatório. Recusa JSON/vídeo de saída existentes; abre VideoCapture e exige FPS positivo. Cria ServicoVisao com --weights/--device opcionais.
 
 Tempo por frame é índice/FPS. Os modos são:
 
-- padrão: MediaPipe + EventService;
-- --iou-only: mãos YOLO + EventService;
+- padrão: MediaPipe + ServicoEventos;
+- --iou-only: mãos YOLO + ServicoEventos;
 - --baseline: mãos YOLO e regra original, primeiro produto que atingir IoU por mão/frame, sem memória.
 
 Se baseline e iou-only forem passados juntos, baseline prevalece. O script define HAND_LANDMARKS_ENABLED conforme o modo, mesmo que settings tenha outro valor.
 
-Exporta eventos com campo segundo. Opcional --annotated-video usa mp4v; não cria pastas-pai de saída. Ao terminar grava frames, fps_video, fps_processamento, modo, parâmetros de interação e eventos. A medição começa depois de carregar/aquecer VisionService; inclui loop de processamento e desenho/escrita do vídeo quando solicitado. Não é FPS de câmera ao vivo.
+Exporta eventos com campo segundo. Opcional --annotated-video usa mp4v; não cria pastas-pai de saída. Ao terminar grava frames, fps_video, fps_processamento, modo, parâmetros de interação e eventos. A medição começa depois de carregar/aquecer ServicoVisao; inclui loop de processamento e desenho/escrita do vídeo quando solicitado. Não é FPS de câmera ao vivo.
 
-`evaluate(events,expected)` associa cada evento uma vez à primeira anotação ainda não usada com mesma classe e tempo entre inicio e fim+tempo_de_confirmacao. Retorna corretos, falsos_ou_duplicados e perdidos. Não valida identidade de instância/mão, não calcula acurácia de tracking nem implementa matching ótimo. Anotações são JSON com produto/inicio/fim; não há schema Pydantic para esse arquivo.
+`avaliar_eventos(eventos, esperados)` associa cada evento uma vez à primeira anotação ainda não usada com mesma classe e tempo entre inicio e fim+tempo_de_confirmacao. Retorna corretos, falsos_ou_duplicados e perdidos. Não valida identidade de instância/mão, não calcula acurácia de tracking nem implementa matching ótimo. Anotações são JSON com produto/inicio/fim; não há schema Pydantic para esse arquivo.
 
 Finalmente libera captura, VideoWriter e visão. O replay não publica na API.
 
 ### 11.4 benchmark_tcc.py
 
-`digest(path)` calcula SHA-256 dos bytes.
+`calcular_hash(path)` calcula SHA-256 dos bytes.
 
 `main()` recebe --out obrigatório e --model opcional. Sem --model, exige CUDA e pasta de saída inédita. Congela imagens e rótulos do data/dataset atual, preserva JSONs de origem e regenera caixas de cada anotação usando **todos os pontos**, extremos mínimos/máximos e recorte à imagem. Aceita polygon/rectangle/mask, rejeita classes desconhecidas e caixas degeneradas.
 
 Verifica imagens binariamente idênticas entre train/val por hash. Isso não detecta frames apenas parecidos. Mantém o split existente; não faz nova divisão por sessão. Grava YAML com caminho da cópia e protocol.json com ambiente, hashes e parâmetros. Inicia um subprocesso por modelo, sequencialmente, com logs separados. Ao final reúne summary.json e comparativo.csv.
 
-`train_one(out,name)` treina a arquitetura solicitada por 50 épocas: patience=0, imgsz=640, batch=2, workers=2, device=0, seed=0, deterministic=true, fraction=1, AdamW, lr0=0.00125, momentum=0.9, weight_decay=0.0005, nbs=64, amp=false, cache=false e close_mosaic=10. Lê o best.pt e reavalia com batch=1, FP32, rect=false, conf=0.001, iou=0.7, max_det=300 e sem augment. Registra métricas globais, por classe, tempo, melhor época no CSV e hash.
+`treinar_modelo(out,name)` treina a arquitetura solicitada por 50 épocas: patience=0, imgsz=640, batch=2, workers=2, device=0, seed=0, deterministic=true, fraction=1, AdamW, lr0=0.00125, momentum=0.9, weight_decay=0.0005, nbs=64, amp=false, cache=false e close_mosaic=10. Lê o best.pt e reavalia com batch=1, FP32, rect=false, conf=0.001, iou=0.7, max_det=300 e sem augment. Registra métricas globais, por classe, tempo, melhor época no CSV e hash.
 
-Com --model, chama apenas train_one sobre uma cópia já preparada. A opção é usada pelos subprocessos; não é retomada automática de checkpoint. Reusar diretório com execução existente pode gerar conflitos/nomes incrementados: prefira saída nova para o protocolo completo.
+Com --model, chama apenas treinar_modelo sobre uma cópia já preparada. A opção é usada pelos subprocessos; não é retomada automática de checkpoint. Reusar diretório com execução existente pode gerar conflitos/nomes incrementados: prefira saída nova para o protocolo completo.
 
 Esse script compara quatro modelos deliberadamente, independentemente de MODELO_ATIVO. Não publica pesos automaticamente.
 
 ### 11.5 relatorio_benchmark_tcc.py
 
-- `number(value,digits=2)`: formata decimal com vírgula.
-- `table(headers,rows)`: monta tabela Markdown.
+- `formatar_numero(value,digits=2)`: formata decimal com vírgula.
+- `montar_tabela(headers,rows)`: monta tabela Markdown.
 - `main()`: exige resumos e CSVs dos quatro modelos, cada CSV com exatamente 50 linhas de épocas. Produz tabela global, por classe, melhor métrica até época 20/50, comparativo_por_classe.csv, RELATORIO_TCC.md e curvas_map.png com Matplotlib Agg.
 
 O texto de protocolo do relatório contém informações fixas da execução original (GPU, versões, contagens e histórico da conversão). Ao aplicar o script a outro conjunto/ambiente, esse texto precisa ser revisado; não é inteiramente calculado a partir dos arquivos.
@@ -694,9 +694,9 @@ Execute a suíte conforme o Manual de Uso. Testes usam fontes falsas/mocks para 
 | Novas classes | CLASSES, anotações, pesos treinados e validação de names |
 | Geometria/tempo de interação | event_service.py, config.py, test_interactions.py |
 | Tracking | tracking_service.py e testes de identidade |
-| Novo metadado no evento | EventService, EventoEntrada, frontend se precisar exibir |
+| Novo metadado no evento | ServicoEventos, EventoEntrada, frontend se precisar exibir |
 | Overlay no navegador | Exige alteração explícita do fluxo do stream; overlay atual é local |
-| Envio HTTP da CLI | api_controller.py; POST hoje comentado |
+| Envio HTTP da CLI | api_controller.py; publicação HTTP desativada |
 | Converter polígonos no treino normal | annotation_converter.py, testes e comparação de rótulos |
 | Nova arquitetura no catálogo | MODELOS, Literal de MODELO_ATIVO, pesos base/treinados, benchmark se aplicável |
 | Novo botão/rota | router, schema de entrada, frontend e teste de contrato |
@@ -705,16 +705,19 @@ Mantenha as camadas separadas. Não incorpore hardware/treino real em testes de 
 
 ## 13. Índice de símbolos do código
 
-Índice extraído dos arquivos Python durante esta revisão. As seções anteriores explicam os algoritmos e efeitos; esta lista fornece nomes, parâmetros e links para localizar cada definição. Funções internas de mocks dentro de testes não fazem parte da API do sistema.
+Atualizado a partir das assinaturas Python em 13/09/2026. As classes e funções
+anteriores continuam disponíveis pelos adaptadores documentados em
+[Refatoração](REFATORACAO.md). Os links apontam para a definição atual.
 
 ### backend/app/capturar_frames.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `deve_capturar(ultimo_salvamento, agora, intervalo)` | [linha 13](../backend/app/capturar_frames.py#L13) |
-| `gerar_nome_arquivo(contador)` | [linha 18](../backend/app/capturar_frames.py#L18) |
-| `capturar_frames(pasta_saida=None, intervalo=2.0, max_frames=0, mostrar_janela=True, fonte_frames=None)` | [linha 22](../backend/app/capturar_frames.py#L22) |
-| `main()` | [linha 81](../backend/app/capturar_frames.py#L81) |
+| `deve_capturar(ultimo_salvamento, agora, intervalo)` | [linha 14](../backend/app/capturar_frames.py#L14) |
+| `gerar_nome_arquivo(contador)` | [linha 19](../backend/app/capturar_frames.py#L19) |
+| `_salvar_jpeg(imagem, caminho)` | [linha 23](../backend/app/capturar_frames.py#L23) |
+| `capturar_frames(pasta_saida=None, intervalo=2.0, max_frames=0, mostrar_janela=True, fonte_frames=None)` | [linha 36](../backend/app/capturar_frames.py#L36) |
+| `main()` | [linha 87](../backend/app/capturar_frames.py#L87) |
 
 ### backend/app/cli_monitor.py
 
@@ -726,65 +729,65 @@ Mantenha as camadas separadas. Não incorpore hardware/treino real em testes de 
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `enviar_eventos(lista_eventos)` | [linha 8](../backend/app/controllers/api_controller.py#L8) |
+| `enviar_eventos(lista_eventos)` | [linha 5](../backend/app/controllers/api_controller.py#L5) |
 
 ### backend/app/core/config.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `class Settings` | [linha 14](../backend/app/core/config.py#L14) |
-| `Settings.BASE_MODEL(self)` | [linha 65](../backend/app/core/config.py#L65) |
-| `Settings.MODEL_PATH(self)` | [linha 69](../backend/app/core/config.py#L69) |
-| `Settings.TRAINING_NAME(self)` | [linha 73](../backend/app/core/config.py#L73) |
+| `class Configuracoes` | [linha 15](../backend/app/core/config.py#L15) |
+| `Configuracoes.BASE_MODEL(self)` | [linha 66](../backend/app/core/config.py#L66) |
+| `Configuracoes.MODEL_PATH(self)` | [linha 70](../backend/app/core/config.py#L70) |
+| `Configuracoes.TRAINING_NAME(self)` | [linha 74](../backend/app/core/config.py#L74) |
 
 ### backend/app/core/state.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `class AppState` | [linha 7](../backend/app/core/state.py#L7) |
-| `AppState.__init__(self, max_eventos=200)` | [linha 8](../backend/app/core/state.py#L8) |
-| `AppState.registrar_loop(self, loop)` | [linha 24](../backend/app/core/state.py#L24) |
-| `AppState.adicionar_evento(self, evento)` | [linha 27](../backend/app/core/state.py#L27) |
-| `AppState.listar_eventos(self)` | [linha 33](../backend/app/core/state.py#L33) |
-| `async AppState._broadcast(self, evento)` | [linha 37](../backend/app/core/state.py#L37) |
+| `class EstadoAplicacao` | [linha 7](../backend/app/core/state.py#L7) |
+| `EstadoAplicacao.__init__(self, max_eventos=200)` | [linha 8](../backend/app/core/state.py#L8) |
+| `EstadoAplicacao.registrar_loop(self, loop)` | [linha 24](../backend/app/core/state.py#L24) |
+| `EstadoAplicacao.adicionar_evento(self, evento)` | [linha 27](../backend/app/core/state.py#L27) |
+| `EstadoAplicacao.listar_eventos(self)` | [linha 33](../backend/app/core/state.py#L33) |
+| `async EstadoAplicacao._distribuir_evento(self, evento)` | [linha 37](../backend/app/core/state.py#L37) |
 
 ### backend/app/main.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `async lifespan(app: FastAPI)` | [linha 21](../backend/app/main.py#L21) |
-| `health()` | [linha 42](../backend/app/main.py#L42) |
+| `async lifespan(app: FastAPI)` | [linha 20](../backend/app/main.py#L20) |
+| `health()` | [linha 41](../backend/app/main.py#L41) |
 
 ### backend/app/routers/dataset.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `class CapturaEntrada` | [linha 21](../backend/app/routers/dataset.py#L21) |
-| `_extensao_valida(nome)` | [linha 26](../backend/app/routers/dataset.py#L26) |
-| `listar_imagens()` | [linha 31](../backend/app/routers/dataset.py#L31) |
-| `obter_imagem(nome: str)` | [linha 48](../backend/app/routers/dataset.py#L48) |
-| `_executar_captura(intervalo, max_frames)` | [linha 55](../backend/app/routers/dataset.py#L55) |
-| `iniciar_captura(entrada: CapturaEntrada)` | [linha 75](../backend/app/routers/dataset.py#L75) |
-| `status_captura()` | [linha 91](../backend/app/routers/dataset.py#L91) |
-| `abrir_labelme()` | [linha 96](../backend/app/routers/dataset.py#L96) |
+| `class CapturaEntrada` | [linha 23](../backend/app/routers/dataset.py#L23) |
+| `listar_imagens()` | [linha 29](../backend/app/routers/dataset.py#L29) |
+| `obter_imagem(nome: str)` | [linha 34](../backend/app/routers/dataset.py#L34) |
+| `_executar_captura(intervalo, max_frames)` | [linha 41](../backend/app/routers/dataset.py#L41) |
+| `iniciar_captura(entrada: CapturaEntrada)` | [linha 61](../backend/app/routers/dataset.py#L61) |
+| `status_captura()` | [linha 77](../backend/app/routers/dataset.py#L77) |
+| `abrir_labelme()` | [linha 82](../backend/app/routers/dataset.py#L82) |
 
 ### backend/app/routers/eventos.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `class EventoEntrada` | [linha 16](../backend/app/routers/eventos.py#L16) |
-| `listar_eventos()` | [linha 28](../backend/app/routers/eventos.py#L28) |
-| `criar_evento(evento: EventoEntrada)` | [linha 33](../backend/app/routers/eventos.py#L33) |
-| `status_monitoramento()` | [linha 42](../backend/app/routers/eventos.py#L42) |
-| `iniciar_monitoramento()` | [linha 51](../backend/app/routers/eventos.py#L51) |
-| `parar_monitoramento()` | [linha 57](../backend/app/routers/eventos.py#L57) |
-| `async ws_eventos(websocket: WebSocket)` | [linha 63](../backend/app/routers/eventos.py#L63) |
+| `class EventoEntrada` | [linha 17](../backend/app/routers/eventos.py#L17) |
+| `listar_eventos()` | [linha 29](../backend/app/routers/eventos.py#L29) |
+| `criar_evento(evento: EventoEntrada)` | [linha 34](../backend/app/routers/eventos.py#L34) |
+| `status_monitoramento()` | [linha 43](../backend/app/routers/eventos.py#L43) |
+| `iniciar_monitoramento()` | [linha 52](../backend/app/routers/eventos.py#L52) |
+| `parar_monitoramento()` | [linha 58](../backend/app/routers/eventos.py#L58) |
+| `async ws_eventos(websocket: WebSocket)` | [linha 64](../backend/app/routers/eventos.py#L64) |
 
 ### backend/app/routers/modelos.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `listar_modelos()` | [linha 12](../backend/app/routers/modelos.py#L12) |
+| `listar_modelos()` | [linha 13](../backend/app/routers/modelos.py#L13) |
+| `_tamanho_megabytes(caminho)` | [linha 28](../backend/app/routers/modelos.py#L28) |
 
 ### backend/app/routers/stream.py
 
@@ -797,225 +800,309 @@ Mantenha as camadas separadas. Não incorpore hardware/treino real em testes de 
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `class TreinoEntrada` | [linha 17](../backend/app/routers/treino.py#L17) |
-| `_executar(base_model_path, epochs, imgsz, fraction)` | [linha 24](../backend/app/routers/treino.py#L24) |
-| `iniciar_treino(entrada: TreinoEntrada)` | [linha 36](../backend/app/routers/treino.py#L36) |
-| `status_treino()` | [linha 58](../backend/app/routers/treino.py#L58) |
-| `listar_experimentos()` | [linha 63](../backend/app/routers/treino.py#L63) |
+| `class TreinoEntrada` | [linha 18](../backend/app/routers/treino.py#L18) |
+| `_executar(base_model_path, epochs, imgsz, fraction)` | [linha 25](../backend/app/routers/treino.py#L25) |
+| `iniciar_treino(entrada: TreinoEntrada)` | [linha 37](../backend/app/routers/treino.py#L37) |
+| `status_treino()` | [linha 59](../backend/app/routers/treino.py#L59) |
+| `listar_experimentos()` | [linha 64](../backend/app/routers/treino.py#L64) |
 
 ### backend/app/services/annotation_converter.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `labelme_json_to_yolo(json_path, output_dir, classes=None)` | [linha 7](../backend/app/services/annotation_converter.py#L7) |
-| `converter_labelme_para_yolo(json_dir, output_dir, classes=None)` | [linha 43](../backend/app/services/annotation_converter.py#L43) |
+| `converter_arquivo_labelme(caminho_json, pasta_saida, classes=None)` | [linha 8](../backend/app/services/annotation_converter.py#L8) |
+| `converter_labelme_para_yolo(json_dir, output_dir, classes=None)` | [linha 28](../backend/app/services/annotation_converter.py#L28) |
+| `_normalizar_formas(formas, largura_imagem, altura_imagem, classes)` | [linha 41](../backend/app/services/annotation_converter.py#L41) |
+| `labelme_json_to_yolo(json_path, output_dir, classes=None)` | [linha 64](../backend/app/services/annotation_converter.py#L64) |
 
 ### backend/app/services/annotation_paths.py
 
 | Símbolo / assinatura | Código |
 |---|---|
 | `preparar_anotacoes(raw_dir, annotation_dir)` | [linha 8](../backend/app/services/annotation_paths.py#L8) |
+| `_encontrar_imagem(imagens_originais, caminho)` | [linha 35](../backend/app/services/annotation_paths.py#L35) |
 
 ### backend/app/services/camera_service.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `gerador_de_frames(url_stream, stop_event=None, on_status=None)` | [linha 8](../backend/app/services/camera_service.py#L8) |
+| `gerador_de_frames(url_stream, stop_event=None, on_status=None)` | [linha 11](../backend/app/services/camera_service.py#L11) |
+| `_decodificar_resposta(fluxo, sinal_parada)` | [linha 27](../backend/app/services/camera_service.py#L27) |
+
+### backend/app/services/dataset_service.py
+
+| Símbolo / assinatura | Código |
+|---|---|
+| `_extensao_valida(nome)` | [linha 5](../backend/app/services/dataset_service.py#L5) |
+| `listar_imagens(pasta, pasta_anotacoes)` | [linha 9](../backend/app/services/dataset_service.py#L9) |
 
 ### backend/app/services/event_service.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `_segment_hits(a, b, box, margin)` | [linha 13](../backend/app/services/event_service.py#L13) |
-| `contact(hand, product, active=False)` | [linha 33](../backend/app/services/event_service.py#L33) |
-| `gerar_eventos(df_atual)` | [linha 49](../backend/app/services/event_service.py#L49) |
-| `_interpretation(history, hand)` | [linha 60](../backend/app/services/event_service.py#L60) |
-| `class EventService` | [linha 77](../backend/app/services/event_service.py#L77) |
-| `EventService.__init__(self)` | [linha 78](../backend/app/services/event_service.py#L78) |
-| `EventService.reset(self)` | [linha 81](../backend/app/services/event_service.py#L81) |
-| `EventService.processar(self, df_atual, timestamp=None)` | [linha 88](../backend/app/services/event_service.py#L88) |
+| `_segmento_intercepta_caixa(a, b, caixa, margem)` | [linha 16](../backend/app/services/event_service.py#L16) |
+| `verificar_contato(mao, produto, confirmado=False)` | [linha 36](../backend/app/services/event_service.py#L36) |
+| `gerar_eventos(df_atual)` | [linha 55](../backend/app/services/event_service.py#L55) |
+| `_interpretar_movimento(historico, mao)` | [linha 66](../backend/app/services/event_service.py#L66) |
+| `class ServicoEventos` | [linha 84](../backend/app/services/event_service.py#L84) |
+| `ServicoEventos.__init__(self)` | [linha 85](../backend/app/services/event_service.py#L85) |
+| `ServicoEventos.reiniciar(self)` | [linha 88](../backend/app/services/event_service.py#L88) |
+| `ServicoEventos._atualizar_contato(self, par, mao, produto, timestamp)` | [linha 95](../backend/app/services/event_service.py#L95) |
+| `ServicoEventos._processar_par(self, mao, produto, timestamp, pares_observados, eventos)` | [linha 116](../backend/app/services/event_service.py#L116) |
+| `ServicoEventos.processar(self, df_atual, timestamp=None)` | [linha 146](../backend/app/services/event_service.py#L146) |
+| `contact(hand, product, active=False)` | [linha 174](../backend/app/services/event_service.py#L174) |
+
+### backend/app/services/experiment_service.py
+
+| Símbolo / assinatura | Código |
+|---|---|
+| `listar_experimentos()` | [linha 6](../backend/app/services/experiment_service.py#L6) |
 
 ### backend/app/services/hand_service.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `class HandService` | [linha 18](../backend/app/services/hand_service.py#L18) |
-| `HandService.__init__(self)` | [linha 19](../backend/app/services/hand_service.py#L19) |
-| `HandService.processar_frame(self, frame, timestamp)` | [linha 38](../backend/app/services/hand_service.py#L38) |
-| `HandService.close(self)` | [linha 55](../backend/app/services/hand_service.py#L55) |
+| `class ServicoMaos` | [linha 18](../backend/app/services/hand_service.py#L18) |
+| `ServicoMaos.__init__(self)` | [linha 19](../backend/app/services/hand_service.py#L19) |
+| `ServicoMaos.processar_frame(self, frame, timestamp)` | [linha 38](../backend/app/services/hand_service.py#L38) |
+| `ServicoMaos.fechar(self)` | [linha 51](../backend/app/services/hand_service.py#L51) |
+| `_converter_pontos(landmarks, largura, altura)` | [linha 58](../backend/app/services/hand_service.py#L58) |
 
 ### backend/app/services/interaction_overlay.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `draw_interactions(frame, events)` | [linha 7](../backend/app/services/interaction_overlay.py#L7) |
+| `desenhar_interacoes(imagem, eventos)` | [linha 7](../backend/app/services/interaction_overlay.py#L7) |
+| `_desenhar_pontos(saida, item, cor)` | [linha 24](../backend/app/services/interaction_overlay.py#L24) |
+| `draw_interactions(frame, events)` | [linha 37](../backend/app/services/interaction_overlay.py#L37) |
 
 ### backend/app/services/model_service.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `model_paths(name=None)` | [linha 13](../backend/app/services/model_service.py#L13) |
-| `validate_weights(path, name, expected_classes=None)` | [linha 21](../backend/app/services/model_service.py#L21) |
-| `publish_weights(source, name)` | [linha 36](../backend/app/services/model_service.py#L36) |
-| `catalog()` | [linha 56](../backend/app/services/model_service.py#L56) |
+| `caminhos_modelo(nome=None)` | [linha 13](../backend/app/services/model_service.py#L13) |
+| `validar_pesos(caminho, nome, classes_esperadas=None)` | [linha 21](../backend/app/services/model_service.py#L21) |
+| `publicar_pesos(origem, nome)` | [linha 36](../backend/app/services/model_service.py#L36) |
+| `listar_catalogo()` | [linha 55](../backend/app/services/model_service.py#L55) |
+| `_resumo_arquivo(caminho)` | [linha 65](../backend/app/services/model_service.py#L65) |
+| `model_paths(name=None)` | [linha 72](../backend/app/services/model_service.py#L72) |
+| `publish_weights(source, name)` | [linha 75](../backend/app/services/model_service.py#L75) |
+| `validate_weights(path, name, expected_classes=None)` | [linha 78](../backend/app/services/model_service.py#L78) |
 
 ### backend/app/services/shared_camera.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `class SharedCamera` | [linha 9](../backend/app/services/shared_camera.py#L9) |
-| `SharedCamera.__init__(self, url, source=gerador_de_frames)` | [linha 10](../backend/app/services/shared_camera.py#L10) |
-| `SharedCamera.start(self)` | [linha 24](../backend/app/services/shared_camera.py#L24) |
-| `SharedCamera.acquire(self, name)` | [linha 35](../backend/app/services/shared_camera.py#L35) |
-| `SharedCamera.release(self, token)` | [linha 42](../backend/app/services/shared_camera.py#L42) |
-| `SharedCamera._report(self, status, error=None)` | [linha 48](../backend/app/services/shared_camera.py#L48) |
-| `SharedCamera._run(self)` | [linha 54](../backend/app/services/shared_camera.py#L54) |
-| `SharedCamera.wait_frame(self, sequence=0, timeout=0.5)` | [linha 71](../backend/app/services/shared_camera.py#L71) |
-| `SharedCamera.frames(self, stop_event=None, timeout=15)` | [linha 84](../backend/app/services/shared_camera.py#L84) |
-| `SharedCamera.status(self)` | [linha 101](../backend/app/services/shared_camera.py#L101) |
-| `SharedCamera.close(self)` | [linha 111](../backend/app/services/shared_camera.py#L111) |
+| `class CameraCompartilhada` | [linha 12](../backend/app/services/shared_camera.py#L12) |
+| `CameraCompartilhada.__init__(self, url, source=gerador_de_frames)` | [linha 13](../backend/app/services/shared_camera.py#L13) |
+| `CameraCompartilhada.iniciar(self)` | [linha 27](../backend/app/services/shared_camera.py#L27) |
+| `CameraCompartilhada.adquirir(self, name)` | [linha 38](../backend/app/services/shared_camera.py#L38) |
+| `CameraCompartilhada.liberar(self, token)` | [linha 46](../backend/app/services/shared_camera.py#L46) |
+| `CameraCompartilhada._registrar_status(self, status, error=None)` | [linha 52](../backend/app/services/shared_camera.py#L52) |
+| `CameraCompartilhada._ler_imagens(self)` | [linha 58](../backend/app/services/shared_camera.py#L58) |
+| `CameraCompartilhada._tem_frame_novo(self, sequencia)` | [linha 75](../backend/app/services/shared_camera.py#L75) |
+| `CameraCompartilhada.aguardar_frame(self, sequence=0, timeout=0.5)` | [linha 80](../backend/app/services/shared_camera.py#L80) |
+| `CameraCompartilhada.gerar_frames(self, stop_event=None, timeout=15)` | [linha 91](../backend/app/services/shared_camera.py#L91) |
+| `CameraCompartilhada.status(self)` | [linha 108](../backend/app/services/shared_camera.py#L108) |
+| `CameraCompartilhada.fechar(self)` | [linha 118](../backend/app/services/shared_camera.py#L118) |
 
 ### backend/app/services/tracking_service.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `iou(a, b)` | [linha 5](../backend/app/services/tracking_service.py#L5) |
-| `center(box)` | [linha 13](../backend/app/services/tracking_service.py#L13) |
-| `class ObjectTracker` | [linha 17](../backend/app/services/tracking_service.py#L17) |
-| `ObjectTracker.__init__(self, ttl=0.6)` | [linha 19](../backend/app/services/tracking_service.py#L19) |
-| `ObjectTracker.update(self, detections, timestamp)` | [linha 24](../backend/app/services/tracking_service.py#L24) |
+| `_area_caixa(caixa)` | [linha 5](../backend/app/services/tracking_service.py#L5) |
+| `iou(a, b)` | [linha 12](../backend/app/services/tracking_service.py#L12) |
+| `center(box)` | [linha 21](../backend/app/services/tracking_service.py#L21) |
+| `class RastreadorObjetos` | [linha 25](../backend/app/services/tracking_service.py#L25) |
+| `RastreadorObjetos.__init__(self, ttl=0.6)` | [linha 27](../backend/app/services/tracking_service.py#L27) |
+| `RastreadorObjetos._listar_candidatos(self, deteccoes)` | [linha 32](../backend/app/services/tracking_service.py#L32) |
+| `RastreadorObjetos.atualizar(self, detections, timestamp)` | [linha 46](../backend/app/services/tracking_service.py#L46) |
 
 ### backend/app/services/training_service.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `_resolve_device()` | [linha 15](../backend/app/services/training_service.py#L15) |
-| `_train_dataset(data, base_model, epochs, imgsz, fraction)` | [linha 21](../backend/app/services/training_service.py#L21) |
-| `rodar_pipeline_treinamento(pasta_fotos=None, pasta_json=None, pasta_yolo=None, pasta_dataset=None, base_model=None, epochs=50, imgsz=640, fraction=1.0)` | [linha 35](../backend/app/services/training_service.py#L35) |
+| `_resolver_dispositivo()` | [linha 16](../backend/app/services/training_service.py#L16) |
+| `_treinar_dataset(dados, base_model, epochs, imgsz, fraction)` | [linha 22](../backend/app/services/training_service.py#L22) |
+| `rodar_pipeline_treinamento(pasta_fotos=None, pasta_json=None, pasta_yolo=None, pasta_dataset=None, base_model=None, epochs=50, imgsz=640, fraction=1.0)` | [linha 36](../backend/app/services/training_service.py#L36) |
+| `_preparar_dataset(pasta_fotos, pasta_json, pasta_yolo, pasta_dataset)` | [linha 63](../backend/app/services/training_service.py#L63) |
+| `_copiar_conjuntos(conjuntos, pasta_fotos, pasta_yolo, pasta_dataset)` | [linha 108](../backend/app/services/training_service.py#L108) |
+| `_train_dataset(data, base_model, epochs, imgsz, fraction)` | [linha 126](../backend/app/services/training_service.py#L126) |
 
 ### backend/app/services/vision_service.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `class VisionService` | [linha 11](../backend/app/services/vision_service.py#L11) |
-| `VisionService.__init__(self, caminho_pesos=None, device=None)` | [linha 12](../backend/app/services/vision_service.py#L12) |
-| `VisionService.close(self)` | [linha 30](../backend/app/services/vision_service.py#L30) |
-| `VisionService.processar_frame(self, frame, timestamp=None)` | [linha 34](../backend/app/services/vision_service.py#L34) |
+| `class ServicoVisao` | [linha 13](../backend/app/services/vision_service.py#L13) |
+| `ServicoVisao.__init__(self, caminho_pesos=None, device=None)` | [linha 14](../backend/app/services/vision_service.py#L14) |
+| `ServicoVisao.fechar(self)` | [linha 31](../backend/app/services/vision_service.py#L31) |
+| `ServicoVisao.processar_frame(self, frame, timestamp=None)` | [linha 35](../backend/app/services/vision_service.py#L35) |
+
+### backend/app/tests/conftest.py
+
+| Símbolo / assinatura | Código |
+|---|---|
+| `ambiente_temporario(monkeypatch, tmp_path)` | [linha 12](../backend/app/tests/conftest.py#L12) |
 
 ### backend/app/tests/test_annotation_paths.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `test_repara_apenas_caminho_e_preserva_anotacoes(tmp_path)` | [linha 10](../backend/app/tests/test_annotation_paths.py#L10) |
-| `test_imagem_ausente_nao_altera_json(tmp_path)` | [linha 25](../backend/app/tests/test_annotation_paths.py#L25) |
+| `test_repara_apenas_caminho_e_preserva_anotacoes(tmp_path)` | [linha 7](../backend/app/tests/test_annotation_paths.py#L7) |
+| `test_imagem_ausente_nao_altera_json(tmp_path)` | [linha 22](../backend/app/tests/test_annotation_paths.py#L22) |
 
 ### backend/app/tests/test_api.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `client()` | [linha 15](../backend/app/tests/test_api.py#L15) |
-| `test_health(client)` | [linha 22](../backend/app/tests/test_api.py#L22) |
-| `test_listar_eventos_vazio_ou_com_itens(client)` | [linha 28](../backend/app/tests/test_api.py#L28) |
-| `test_criar_evento_aparece_na_listagem(client)` | [linha 34](../backend/app/tests/test_api.py#L34) |
-| `test_websocket_eventos_recebe_broadcast(client)` | [linha 47](../backend/app/tests/test_api.py#L47) |
-| `test_listar_modelos_inclui_os_4_pretreinados(client)` | [linha 57](../backend/app/tests/test_api.py#L57) |
-| `test_status_treino_inicial_ocioso(client)` | [linha 64](../backend/app/tests/test_api.py#L64) |
-| `test_listar_experimentos_retorna_lista(client)` | [linha 70](../backend/app/tests/test_api.py#L70) |
-| `test_treino_start_com_modelo_inexistente_retorna_400(client)` | [linha 77](../backend/app/tests/test_api.py#L77) |
-| `test_listar_imagens_dataset(client)` | [linha 82](../backend/app/tests/test_api.py#L82) |
-| `test_obter_imagem_inexistente_404(client)` | [linha 90](../backend/app/tests/test_api.py#L90) |
-| `test_status_monitoramento_inicial(client)` | [linha 95](../backend/app/tests/test_api.py#L95) |
+| `cliente()` | [linha 10](../backend/app/tests/test_api.py#L10) |
+| `test_saude(cliente)` | [linha 17](../backend/app/tests/test_api.py#L17) |
+| `test_listar_eventos_vazio_ou_com_itens(cliente)` | [linha 23](../backend/app/tests/test_api.py#L23) |
+| `test_criar_evento_aparece_na_listagem(cliente)` | [linha 29](../backend/app/tests/test_api.py#L29) |
+| `test_websocket_eventos_recebe_broadcast(cliente)` | [linha 42](../backend/app/tests/test_api.py#L42) |
+| `test_listar_modelos_inclui_os_4_pretreinados(cliente)` | [linha 52](../backend/app/tests/test_api.py#L52) |
+| `test_status_treino_inicial_ocioso(cliente)` | [linha 59](../backend/app/tests/test_api.py#L59) |
+| `test_listar_experimentos_retorna_lista(cliente)` | [linha 65](../backend/app/tests/test_api.py#L65) |
+| `test_treino_start_com_modelo_inexistente_retorna_400(cliente)` | [linha 72](../backend/app/tests/test_api.py#L72) |
+| `test_listar_imagens_dataset(cliente)` | [linha 77](../backend/app/tests/test_api.py#L77) |
+| `test_obter_imagem_inexistente_404(cliente)` | [linha 85](../backend/app/tests/test_api.py#L85) |
+| `test_status_monitoramento_inicial(cliente)` | [linha 90](../backend/app/tests/test_api.py#L90) |
 
 ### backend/app/tests/test_capturar_frames.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `test_deve_capturar_intervalo_nao_decorrido()` | [linha 14](../backend/app/tests/test_capturar_frames.py#L14) |
-| `test_deve_capturar_intervalo_decorrido_exato()` | [linha 18](../backend/app/tests/test_capturar_frames.py#L18) |
-| `test_deve_capturar_intervalo_excedido()` | [linha 22](../backend/app/tests/test_capturar_frames.py#L22) |
-| `test_gerar_nome_arquivo_eh_unico_por_contador()` | [linha 26](../backend/app/tests/test_capturar_frames.py#L26) |
-| `_frame_falso()` | [linha 34](../backend/app/tests/test_capturar_frames.py#L34) |
-| `test_capturar_frames_respeita_max_frames_com_fonte_falsa(tmp_path)` | [linha 38](../backend/app/tests/test_capturar_frames.py#L38) |
-| `test_capturar_frames_cria_pasta_saida_se_nao_existir(tmp_path)` | [linha 54](../backend/app/tests/test_capturar_frames.py#L54) |
-| `test_capturar_frames_sem_max_frames_para_com_fonte_finita(tmp_path)` | [linha 66](../backend/app/tests/test_capturar_frames.py#L66) |
+| `test_deve_capturar_intervalo_nao_decorrido()` | [linha 10](../backend/app/tests/test_capturar_frames.py#L10) |
+| `test_deve_capturar_intervalo_decorrido_exato()` | [linha 14](../backend/app/tests/test_capturar_frames.py#L14) |
+| `test_deve_capturar_intervalo_excedido()` | [linha 18](../backend/app/tests/test_capturar_frames.py#L18) |
+| `test_gerar_nome_arquivo_eh_unico_por_contador()` | [linha 22](../backend/app/tests/test_capturar_frames.py#L22) |
+| `_frame_falso()` | [linha 30](../backend/app/tests/test_capturar_frames.py#L30) |
+| `test_capturar_frames_respeita_max_frames_com_fonte_falsa(tmp_path)` | [linha 34](../backend/app/tests/test_capturar_frames.py#L34) |
+| `test_capturar_frames_cria_pasta_saida_se_nao_existir(tmp_path)` | [linha 50](../backend/app/tests/test_capturar_frames.py#L50) |
+| `test_capturar_frames_sem_max_frames_para_com_fonte_finita(tmp_path)` | [linha 62](../backend/app/tests/test_capturar_frames.py#L62) |
 
 ### backend/app/tests/test_interactions.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `box(classe, x=0, y=0, size=20, **extra)` | [linha 13](../backend/app/tests/test_interactions.py#L13) |
-| `frame(*products, hands=1)` | [linha 17](../backend/app/tests/test_interactions.py#L17) |
-| `thresholds(monkeypatch)` | [linha 22](../backend/app/tests/test_interactions.py#L22) |
-| `confirm(service, df, start=0)` | [linha 31](../backend/app/tests/test_interactions.py#L31) |
-| `test_three_products_and_no_repeated_events()` | [linha 37](../backend/app/tests/test_interactions.py#L37) |
-| `test_passing_a_then_touching_b()` | [linha 48](../backend/app/tests/test_interactions.py#L48) |
-| `test_release_allows_new_interaction()` | [linha 57](../backend/app/tests/test_interactions.py#L57) |
-| `test_missing_observations_do_not_count_as_contact()` | [linha 67](../backend/app/tests/test_interactions.py#L67) |
-| `test_slow_frames_and_camera_gap_do_not_confirm()` | [linha 77](../backend/app/tests/test_interactions.py#L77) |
-| `test_reordered_same_class_objects_keep_separate_ids()` | [linha 89](../backend/app/tests/test_interactions.py#L89) |
-| `test_two_hands_independent_pairs()` | [linha 97](../backend/app/tests/test_interactions.py#L97) |
-| `test_landmarks_reject_empty_part_of_hand_box()` | [linha 105](../backend/app/tests/test_interactions.py#L105) |
-| `test_finger_tip_and_segment_contact()` | [linha 116](../backend/app/tests/test_interactions.py#L116) |
-| `test_zero_area_and_no_overlap()` | [linha 127](../backend/app/tests/test_interactions.py#L127) |
-| `test_timestamp_rewind_starts_new_candidate()` | [linha 132](../backend/app/tests/test_interactions.py#L132) |
-| `test_api_preserves_hand_metadata()` | [linha 139](../backend/app/tests/test_interactions.py#L139) |
-| `test_joint_motion_is_manipulation_without_duplicate_event()` | [linha 150](../backend/app/tests/test_interactions.py#L150) |
-| `test_hand_motion_alone_is_not_manipulation()` | [linha 161](../backend/app/tests/test_interactions.py#L161) |
-| `test_vision_uses_same_timestamp_and_replaces_yolo_hand(monkeypatch)` | [linha 168](../backend/app/tests/test_interactions.py#L168) |
+| `caixa_teste(classe, x=0, y=0, tamanho=20, **extra)` | [linha 10](../backend/app/tests/test_interactions.py#L10) |
+| `quadro_teste(*produtos, maos=1)` | [linha 14](../backend/app/tests/test_interactions.py#L14) |
+| `limiares(monkeypatch)` | [linha 19](../backend/app/tests/test_interactions.py#L19) |
+| `confirmar(servico, deteccoes, inicio=0)` | [linha 28](../backend/app/tests/test_interactions.py#L28) |
+| `test_tres_produtos_sem_eventos_repetidos()` | [linha 34](../backend/app/tests/test_interactions.py#L34) |
+| `test_passagem_por_um_produto_e_contato_com_outro()` | [linha 45](../backend/app/tests/test_interactions.py#L45) |
+| `test_liberacao_permite_nova_interacao()` | [linha 54](../backend/app/tests/test_interactions.py#L54) |
+| `test_observacoes_ausentes_nao_contam_como_contato()` | [linha 64](../backend/app/tests/test_interactions.py#L64) |
+| `test_imagens_lentas_e_lacuna_nao_confirmam()` | [linha 74](../backend/app/tests/test_interactions.py#L74) |
+| `test_objetos_reordenados_mantem_ids_distintos()` | [linha 86](../backend/app/tests/test_interactions.py#L86) |
+| `test_duas_maos_formam_pares_independentes()` | [linha 94](../backend/app/tests/test_interactions.py#L94) |
+| `test_pontos_rejeitam_regiao_vazia_da_caixa_da_mao()` | [linha 102](../backend/app/tests/test_interactions.py#L102) |
+| `test_contato_da_ponta_do_dedo_e_segmento()` | [linha 113](../backend/app/tests/test_interactions.py#L113) |
+| `test_area_zero_e_ausencia_de_sobreposicao()` | [linha 124](../backend/app/tests/test_interactions.py#L124) |
+| `test_relogio_regressivo_inicia_novo_candidato()` | [linha 129](../backend/app/tests/test_interactions.py#L129) |
+| `test_api_preserva_metadados_da_mao()` | [linha 136](../backend/app/tests/test_interactions.py#L136) |
+| `test_movimento_conjunto_indica_manipulacao_sem_duplicar_evento()` | [linha 147](../backend/app/tests/test_interactions.py#L147) |
+| `test_movimento_isolado_da_mao_nao_indica_manipulacao()` | [linha 158](../backend/app/tests/test_interactions.py#L158) |
+| `test_visao_usa_mesmo_instante_e_substitui_mao_yolo(monkeypatch)` | [linha 165](../backend/app/tests/test_interactions.py#L165) |
 
 ### backend/app/tests/test_model_selection.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `test_selection_resolves_both_paths(name)` | [linha 16](../backend/app/tests/test_model_selection.py#L16) |
-| `test_unknown_model_rejected()` | [linha 23](../backend/app/tests/test_model_selection.py#L23) |
-| `test_legacy_environment_cannot_override_paths(monkeypatch)` | [linha 28](../backend/app/tests/test_model_selection.py#L28) |
-| `test_catalog_and_benchmark_graphs()` | [linha 36](../backend/app/tests/test_model_selection.py#L36) |
-| `test_training_cannot_choose_another_model()` | [linha 50](../backend/app/tests/test_model_selection.py#L50) |
-| `test_bad_weights_do_not_replace_active_file(monkeypatch, tmp_path)` | [linha 57](../backend/app/tests/test_model_selection.py#L57) |
-| `test_successful_publication_and_copy_failure(monkeypatch, tmp_path)` | [linha 72](../backend/app/tests/test_model_selection.py#L72) |
-| `test_training_uses_actual_output_and_publishes_only_after_success(monkeypatch, tmp_path)` | [linha 88](../backend/app/tests/test_model_selection.py#L88) |
+| `test_selecao_resolve_ambos_os_caminhos(name)` | [linha 14](../backend/app/tests/test_model_selection.py#L14) |
+| `test_modelo_desconhecido_rejeitado()` | [linha 21](../backend/app/tests/test_model_selection.py#L21) |
+| `test_ambiente_antigo_nao_sobrescreve_caminhos(monkeypatch)` | [linha 26](../backend/app/tests/test_model_selection.py#L26) |
+| `test_catalogo_e_graficos_benchmark()` | [linha 34](../backend/app/tests/test_model_selection.py#L34) |
+| `test_treino_nao_pode_escolher_outro_modelo()` | [linha 48](../backend/app/tests/test_model_selection.py#L48) |
+| `test_pesos_invalidos_preservam_arquivo_ativo(monkeypatch, tmp_path)` | [linha 55](../backend/app/tests/test_model_selection.py#L55) |
+| `test_publicacao_e_falha_na_copia(monkeypatch, tmp_path)` | [linha 70](../backend/app/tests/test_model_selection.py#L70) |
+| `test_treino_publica_saida_real_apenas_apos_sucesso(monkeypatch, tmp_path)` | [linha 86](../backend/app/tests/test_model_selection.py#L86) |
+
+### backend/app/tests/test_protecao_refatoracao.py
+
+| Símbolo / assinatura | Código |
+|---|---|
+| `test_json_invalido_nao_cria_rotulo(tmp_path)` | [linha 16](../backend/app/tests/test_protecao_refatoracao.py#L16) |
+| `test_poligono_da_aplicacao_preserva_regra_historica(tmp_path)` | [linha 24](../backend/app/tests/test_protecao_refatoracao.py#L24) |
+| `test_reparo_valida_todos_os_arquivos_antes_de_gravar(tmp_path)` | [linha 34](../backend/app/tests/test_protecao_refatoracao.py#L34) |
+| `test_camera_descarta_imagem_antiga(monkeypatch)` | [linha 47](../backend/app/tests/test_protecao_refatoracao.py#L47) |
+| `test_estado_limita_historico_e_remove_cliente_desconectado()` | [linha 57](../backend/app/tests/test_protecao_refatoracao.py#L57) |
+| `test_falha_da_visao_libera_consumidor(monkeypatch)` | [linha 76](../backend/app/tests/test_protecao_refatoracao.py#L76) |
+
+### backend/app/tests/test_scripts.py
+
+| Símbolo / assinatura | Código |
+|---|---|
+| `criar_anotacao(caminho, pontos=None, tipo='polygon', classe='cha')` | [linha 13](../backend/app/tests/test_scripts.py#L13) |
+| `test_benchmark_usa_todos_os_pontos_e_recorta_limites(tmp_path)` | [linha 22](../backend/app/tests/test_scripts.py#L22) |
+| `test_benchmark_rejeita_anotacao_incompativel(tmp_path, alteracao)` | [linha 31](../backend/app/tests/test_scripts.py#L31) |
+| `preparar_origem_benchmark(raiz, duplicar=False)` | [linha 38](../backend/app/tests/test_scripts.py#L38) |
+| `test_congelamento_preserva_origem_e_registra_hashes(monkeypatch, tmp_path)` | [linha 51](../backend/app/tests/test_scripts.py#L51) |
+| `test_congelamento_rejeita_imagem_repetida(monkeypatch, tmp_path)` | [linha 65](../backend/app/tests/test_scripts.py#L65) |
+| `test_avaliacao_replay_conta_duplicatas_e_perdas()` | [linha 74](../backend/app/tests/test_scripts.py#L74) |
+| `test_baseline_mantem_primeiro_produto_por_mao()` | [linha 82](../backend/app/tests/test_scripts.py#L82) |
+| `preparar_resultados(pasta, epocas=50)` | [linha 92](../backend/app/tests/test_scripts.py#L92) |
+| `test_relatorio_gera_markdown_csv_e_figura(monkeypatch, tmp_path)` | [linha 107](../backend/app/tests/test_scripts.py#L107) |
+| `test_relatorio_rejeita_treino_incompleto(monkeypatch, tmp_path)` | [linha 118](../backend/app/tests/test_scripts.py#L118) |
+| `test_replay_processa_video_e_fecha_recursos(monkeypatch, tmp_path, modo)` | [linha 128](../backend/app/tests/test_scripts.py#L128) |
+
+### backend/app/tests/test_servicos_refatorados.py
+
+| Símbolo / assinatura | Código |
+|---|---|
+| `test_interfaces_anteriores_aceitam_argumentos_nomeados(tmp_path)` | [linha 14](../backend/app/tests/test_servicos_refatorados.py#L14) |
+| `test_pontos_da_mao_convertidos_para_pixels()` | [linha 26](../backend/app/tests/test_servicos_refatorados.py#L26) |
+| `test_maos_exigem_instantes_crescentes(monkeypatch)` | [linha 33](../backend/app/tests/test_servicos_refatorados.py#L33) |
+| `test_validacao_de_pesos_confere_classes_e_arquitetura(monkeypatch, tmp_path)` | [linha 47](../backend/app/tests/test_servicos_refatorados.py#L47) |
+| `test_dataset_separa_pares_sem_alterar_aleatoriedade_global(monkeypatch)` | [linha 63](../backend/app/tests/test_servicos_refatorados.py#L63) |
+| `test_falha_codificacao_nao_publica_jpeg(monkeypatch, tmp_path)` | [linha 86](../backend/app/tests/test_servicos_refatorados.py#L86) |
+| `test_falha_treino_e_captura_atualiza_estado(monkeypatch)` | [linha 95](../backend/app/tests/test_servicos_refatorados.py#L95) |
+| `test_controlador_ignora_ausencia_de_eventos(eventos, capsys)` | [linha 112](../backend/app/tests/test_servicos_refatorados.py#L112) |
 
 ### backend/app/tests/test_shared_camera.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `test_broadcast_uma_conexao_copias_e_consumidor_lento()` | [linha 22](../backend/app/tests/test_shared_camera.py#L22) |
-| `test_reconecta_fecha_respostas_e_decodifica_varios_jpegs(monkeypatch)` | [linha 46](../backend/app/tests/test_shared_camera.py#L46) |
-| `test_stream_worker_captura_e_evento_ws_mesma_fonte(monkeypatch, tmp_path)` | [linha 72](../backend/app/tests/test_shared_camera.py#L72) |
-| `test_parar_worker_sem_frames(monkeypatch)` | [linha 114](../backend/app/tests/test_shared_camera.py#L114) |
-| `test_ultimo_consumidor_fecha_e_permite_reiniciar()` | [linha 132](../backend/app/tests/test_shared_camera.py#L132) |
-| `test_captura_libera_camera_ao_atingir_limite(tmp_path)` | [linha 156](../backend/app/tests/test_shared_camera.py#L156) |
-| `test_galeria_unicode_e_jpeg_completo(monkeypatch, tmp_path)` | [linha 168](../backend/app/tests/test_shared_camera.py#L168) |
-| `test_stream_desconectado_libera_consumidor(monkeypatch)` | [linha 188](../backend/app/tests/test_shared_camera.py#L188) |
+| `test_broadcast_uma_conexao_copias_e_consumidor_lento()` | [linha 20](../backend/app/tests/test_shared_camera.py#L20) |
+| `test_reconecta_fecha_respostas_e_decodifica_varios_jpegs(monkeypatch)` | [linha 44](../backend/app/tests/test_shared_camera.py#L44) |
+| `test_stream_worker_captura_e_evento_ws_mesma_fonte(monkeypatch, tmp_path)` | [linha 70](../backend/app/tests/test_shared_camera.py#L70) |
+| `test_parar_worker_sem_frames(monkeypatch)` | [linha 112](../backend/app/tests/test_shared_camera.py#L112) |
+| `test_ultimo_consumidor_fecha_e_permite_reiniciar()` | [linha 130](../backend/app/tests/test_shared_camera.py#L130) |
+| `test_captura_libera_camera_ao_atingir_limite(tmp_path)` | [linha 154](../backend/app/tests/test_shared_camera.py#L154) |
+| `test_galeria_unicode_e_jpeg_completo(monkeypatch, tmp_path)` | [linha 166](../backend/app/tests/test_shared_camera.py#L166) |
+| `test_stream_desconectado_libera_consumidor(monkeypatch)` | [linha 186](../backend/app/tests/test_shared_camera.py#L186) |
 
 ### backend/app/tests/test_validacao_final.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `test_eventos_mao_sobre_produto_e_frame_vazio()` | [linha 18](../backend/app/tests/test_validacao_final.py#L18) |
-| `test_iou_area_nula()` | [linha 29](../backend/app/tests/test_validacao_final.py#L29) |
-| `test_conversao_retangulo_invertido_e_classe_desconhecida(tmp_path)` | [linha 34](../backend/app/tests/test_validacao_final.py#L34) |
-| `test_conversao_dimensao_invalida_e_pasta_vazia(tmp_path)` | [linha 44](../backend/app/tests/test_validacao_final.py#L44) |
-| `test_frontend_e_galeria_coerentes_com_arquivos()` | [linha 54](../backend/app/tests/test_validacao_final.py#L54) |
+| `test_eventos_mao_sobre_produto_e_frame_vazio()` | [linha 16](../backend/app/tests/test_validacao_final.py#L16) |
+| `test_iou_area_nula()` | [linha 27](../backend/app/tests/test_validacao_final.py#L27) |
+| `test_conversao_retangulo_invertido_e_classe_desconhecida(tmp_path)` | [linha 32](../backend/app/tests/test_validacao_final.py#L32) |
+| `test_conversao_dimensao_invalida_e_pasta_vazia(tmp_path)` | [linha 42](../backend/app/tests/test_validacao_final.py#L42) |
+| `test_frontend_e_galeria_coerentes_com_arquivos()` | [linha 52](../backend/app/tests/test_validacao_final.py#L52) |
 
 ### backend/app/worker.py
 
 | Símbolo / assinatura | Código |
 |---|---|
 | `_loop_monitoramento()` | [linha 20](../backend/app/worker.py#L20) |
-| `iniciar()` | [linha 73](../backend/app/worker.py#L73) |
-| `parar()` | [linha 86](../backend/app/worker.py#L86) |
-| `esta_rodando()` | [linha 95](../backend/app/worker.py#L95) |
-| `encerrar()` | [linha 99](../backend/app/worker.py#L99) |
+| `iniciar()` | [linha 77](../backend/app/worker.py#L77) |
+| `parar()` | [linha 90](../backend/app/worker.py#L90) |
+| `esta_rodando()` | [linha 98](../backend/app/worker.py#L98) |
+| `encerrar()` | [linha 102](../backend/app/worker.py#L102) |
 
 ### scripts/benchmark_tcc.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `digest(path)` | [linha 16](../scripts/benchmark_tcc.py#L16) |
-| `train_one(out, name)` | [linha 19](../scripts/benchmark_tcc.py#L19) |
-| `main()` | [linha 50](../scripts/benchmark_tcc.py#L50) |
+| `calcular_hash(caminho)` | [linha 16](../scripts/benchmark_tcc.py#L16) |
+| `treinar_modelo(pasta_saida, nome)` | [linha 19](../scripts/benchmark_tcc.py#L19) |
+| `converter_anotacao_benchmark(annotation)` | [linha 51](../scripts/benchmark_tcc.py#L51) |
+| `congelar_dataset(out)` | [linha 70](../scripts/benchmark_tcc.py#L70) |
+| `main()` | [linha 105](../scripts/benchmark_tcc.py#L105) |
+| `digest(path)` | [linha 146](../scripts/benchmark_tcc.py#L146) |
+| `train_one(out, name)` | [linha 149](../scripts/benchmark_tcc.py#L149) |
 
 ### scripts/experimento_yolo26.py
 
@@ -1027,19 +1114,59 @@ Mantenha as camadas separadas. Não incorpore hardware/treino real em testes de 
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `number(value, digits=2)` | [linha 7](../scripts/relatorio_benchmark_tcc.py#L7) |
-| `table(headers, rows)` | [linha 10](../scripts/relatorio_benchmark_tcc.py#L10) |
-| `main()` | [linha 13](../scripts/relatorio_benchmark_tcc.py#L13) |
+| `formatar_numero(valor, casas_decimais=2)` | [linha 7](../scripts/relatorio_benchmark_tcc.py#L7) |
+| `montar_tabela(cabecalhos, linhas)` | [linha 10](../scripts/relatorio_benchmark_tcc.py#L10) |
+| `salvar_curvas(out, histories, metric)` | [linha 21](../scripts/relatorio_benchmark_tcc.py#L21) |
+| `montar_linhas(resultados, historicos, metrica)` | [linha 37](../scripts/relatorio_benchmark_tcc.py#L37) |
+| `montar_relatorio(linhas_principais, linhas_epocas, linhas_classes)` | [linha 64](../scripts/relatorio_benchmark_tcc.py#L64) |
+| `_ler_historico(caminho)` | [linha 74](../scripts/relatorio_benchmark_tcc.py#L74) |
+| `main()` | [linha 80](../scripts/relatorio_benchmark_tcc.py#L80) |
+| `number(value, digits=2)` | [linha 104](../scripts/relatorio_benchmark_tcc.py#L104) |
+| `table(headers, rows)` | [linha 107](../scripts/relatorio_benchmark_tcc.py#L107) |
 
 ### scripts/replay_interactions.py
 
 | Símbolo / assinatura | Código |
 |---|---|
-| `evaluate(events, expected)` | [linha 17](../scripts/replay_interactions.py#L17) |
-| `main()` | [linha 31](../scripts/replay_interactions.py#L31) |
+| `avaliar_eventos(eventos, esperados)` | [linha 17](../scripts/replay_interactions.py#L17) |
+| `gerar_eventos_baseline(detections)` | [linha 31](../scripts/replay_interactions.py#L31) |
+| `_validar_saidas(opcoes, argumentos)` | [linha 46](../scripts/replay_interactions.py#L46) |
+| `_montar_resultado(opcoes, quadros, fps, tempo_decorrido, eventos)` | [linha 53](../scripts/replay_interactions.py#L53) |
+| `_validar_video(captura, caminho_video)` | [linha 66](../scripts/replay_interactions.py#L66) |
+| `main()` | [linha 76](../scripts/replay_interactions.py#L76) |
+| `evaluate(events, expected)` | [linha 131](../scripts/replay_interactions.py#L131) |
 
 ### scripts/setup_hands.py
 
 | Símbolo / assinatura | Código |
 |---|---|
 | `main()` | [linha 9](../scripts/setup_hands.py#L9) |
+
+### scripts/validar_projeto.py
+
+| Símbolo / assinatura | Código |
+|---|---|
+| `executar(comando)` | [linha 9](../scripts/validar_projeto.py#L9) |
+| `main()` | [linha 14](../scripts/validar_projeto.py#L14) |
+
+### scripts/verificar_codigo.py
+
+| Símbolo / assinatura | Código |
+|---|---|
+| `medir_funcao(funcao)` | [linha 10](../scripts/verificar_codigo.py#L10) |
+| `inventariar()` | [linha 23](../scripts/verificar_codigo.py#L23) |
+| `verificar_espacos()` | [linha 43](../scripts/verificar_codigo.py#L43) |
+| `verificar_limite(inventario, limite)` | [linha 55](../scripts/verificar_codigo.py#L55) |
+| `main()` | [linha 67](../scripts/verificar_codigo.py#L67) |
+
+### Frontend e recursos
+
+As funções JavaScript estão em [frontend/js](../frontend/js).
+Os testes da interface estão em [frontend/tests](../frontend/tests).
+O texto fixo do relatório experimental está em
+[scripts/templates/relatorio_tcc.md](../scripts/templates/relatorio_tcc.md).
+
+### Validação da refatoração
+
+O registro completo de etapas, compatibilidade, métricas e limitações está em
+[REFATORACAO.md](REFATORACAO.md). Use o comando único de validação documentado ali.

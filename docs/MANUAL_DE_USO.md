@@ -394,7 +394,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, "backend/app")
 from core.config import settings
-from services.model_service import publish_weights
+from services.model_service import publicar_pesos
 
 origem = (
     Path(settings.BENCHMARKS_DIR)
@@ -403,7 +403,7 @@ origem = (
     / "weights"
     / "best.pt"
 )
-print(publish_weights(origem, settings.MODELO_ATIVO))
+print(publicar_pesos(origem, settings.MODELO_ATIVO))
 '@ | .\.venv\Scripts\python.exe -
 ```
 
@@ -419,7 +419,7 @@ Esse comando **substitui os pesos locais publicados** após validação. Pare/in
 
 Mostra caixas, IDs, pontos numerados e pares candidatos/confirmados. Q encerra. Requer desktop e câmera acessível.
 
-O log inicial mostra o caminho de pesos. O texto “Evento enviado” posterior é apenas impressão no estado atual do controller: requests.post está comentado. Não espere eventos dessa CLI no navegador. Para publicar pela API, use as chamadas explícitas da próxima seção ou o worker da interface.
+O log inicial mostra o caminho de pesos. O texto “Evento enviado” posterior é apenas impressão no estado atual do controller: a publicação HTTP está desativada. Não espere eventos dessa CLI no navegador. Para publicar pela API, use as chamadas explícitas da próxima seção ou o worker da interface.
 
 ### 8.2 Processar imagens em Python
 
@@ -430,11 +430,11 @@ import sys
 import cv2
 sys.path.insert(0, "backend/app")
 
-from services.vision_service import VisionService
-from services.event_service import EventService
+from services.vision_service import ServicoVisao
+from services.event_service import ServicoEventos
 
-visao = VisionService(device="cpu")
-interacoes = EventService()
+visao = ServicoVisao(device="cpu")
+interacoes = ServicoEventos()
 try:
     for segundo, caminho in [(0.0, "frame0.jpg"), (0.15, "frame1.jpg"), (0.30, "frame2.jpg")]:
         frame = cv2.imread(caminho)
@@ -447,9 +447,9 @@ finally:
     visao.close()
 ```
 
-Salve o exemplo em arquivo e execute com o Python da .venv, a partir da raiz. Mantenha uma instância de EventService por sequência/sessão, em vez de criar uma por frame. As três observações só confirmam se houver evidência suficiente; o exemplo não garante evento.
+Salve o exemplo em arquivo e execute com o Python da .venv, a partir da raiz. Mantenha uma instância de ServicoEventos por sequência/sessão, em vez de criar uma por frame. As três observações só confirmam se houver evidência suficiente; o exemplo não garante evento.
 
-VisionService devolve DataFrame; coordenadas são pixels. Mãos incluem landmarks. As funções não enviam eventos por conta própria. Imagem isolada permite detecção, mas não fornece o tempo necessário para confirmar interação.
+ServicoVisao devolve DataFrame; coordenadas são pixels. Mãos incluem landmarks. As funções não enviam eventos por conta própria. Imagem isolada permite detecção, mas não fornece o tempo necessário para confirmar interação.
 
 ### 8.3 Testes
 
@@ -580,7 +580,7 @@ Escolha saídas novas e pastas-pai já existentes:
 | --annotated-video | Salva MP4 com overlay disponível no serviço |
 | --annotations | JSON de interações esperadas para comparação |
 
-Não passe baseline e iou-only juntos. Baseline prevalece se ambos forem usados. O baseline não alimenta o overlay de EventService; use os eventos JSON para analisar esse modo.
+Não passe baseline e iou-only juntos. Baseline prevalece se ambos forem usados. O baseline não alimenta o overlay de ServicoEventos; use os eventos JSON para analisar esse modo.
 
 O modo padrão ativa MediaPipe. Para comparar em outra arquitetura, altere MODELO_ATIVO e reabra o processo, ou use --weights somente para esse diagnóstico:
 
@@ -721,3 +721,19 @@ A pasta docs contém somente:
 - [Manual de Uso](MANUAL_DE_USO.md): este documento, com operação e configuração.
 
 O README da raiz é uma porta de entrada. Relatórios e métricas de experimentos ficam nos próprios experimentos, sem criar novos manuais de referência.
+
+## Validação após alterações no código
+
+Na raiz, execute:
+
+```powershell
+.\.venv\Scripts\python.exe -B scripts/validar_projeto.py
+```
+
+O comando verifica sintaxe, espaços, limite de decisões por função, os testes
+Python e os testes JavaScript. Requer o ambiente Python do projeto e Node.js.
+Não instala pacotes nem inicia câmera ou treinamento.
+
+Consulte [REFATORACAO.md](REFATORACAO.md) para convenções, compatibilidade e
+comparação de complexidade. Os testes comuns usam arquivos temporários; testes
+marcados como hardware precisam de execução separada.

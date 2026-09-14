@@ -1,71 +1,83 @@
-const formCaptura = document.getElementById("form-captura");
-const capturaStatusEl = document.getElementById("captura-status");
-const galeriaEl = document.getElementById("galeria");
-const galeriaTotalEl = document.getElementById("galeria-total");
+const formularioCaptura = document.getElementById("form-captura");
+const statusCaptura = document.getElementById("captura-status");
+const galeria = document.getElementById("galeria");
+const totalGaleria = document.getElementById("galeria-total");
 
 let capturaAnterior = null;
 let recarregarAposCaptura = false;
 
 async function atualizarStatusCaptura() {
-  const { status, erro, total } = await apiGet("/api/dataset/capturar/status");
-  if ((status === "concluido" || status === "erro") && (recarregarAposCaptura || capturaAnterior !== status)) {
+  const { status, erro, total } = await obterJson("/api/dataset/capturar/status");
+  const terminou = status === "concluido" || status === "erro";
+  if (terminou && (recarregarAposCaptura || capturaAnterior !== status)) {
     await carregarGaleria();
     recarregarAposCaptura = false;
   }
   capturaAnterior = status;
-  capturaStatusEl.textContent = `Status: ${status} (total capturado: ${total})` + (erro ? ` — erro: ${erro}` : "");
+  statusCaptura.textContent = `Status: ${status} (total capturado: ${total})` + (erro ? ` — erro: ${erro}` : "");
 }
 
-formCaptura.addEventListener("submit", async (ev) => {
-  ev.preventDefault();
+async function consultarCaptura() {
+  try {
+    await atualizarStatusCaptura();
+  } catch (erro) {
+    statusCaptura.textContent = erro.message;
+  }
+}
+
+formularioCaptura.addEventListener("submit", async (evento) => {
+  evento.preventDefault();
   try {
     recarregarAposCaptura = true;
-    await apiPost("/api/dataset/capturar", {
+    await enviarJson("/api/dataset/capturar", {
       intervalo: Number(document.getElementById("input-intervalo").value),
       max_frames: Number(document.getElementById("input-max-frames").value),
     });
-  } catch (e) {
-    alert(e.message);
+  } catch (erro) {
+    alert(erro.message);
   }
-  atualizarStatusCaptura();
+  await consultarCaptura();
 });
 
 document.getElementById("btn-abrir-labelme").addEventListener("click", async () => {
   try {
-    await apiPost("/api/dataset/anotar");
+    await enviarJson("/api/dataset/anotar");
     alert("LabelMe aberto em uma janela separada.");
-  } catch (e) {
-    alert(e.message);
+  } catch (erro) {
+    alert(erro.message);
   }
 });
 
-async function carregarGaleria() {
-  const { imagens } = await apiGet("/api/dataset/imagens");
-  galeriaTotalEl.textContent = imagens.length;
-  const fragmento = document.createDocumentFragment();
-  for (const item of imagens) {
-    const figure = document.createElement("figure");
-    figure.className = `thumb ${item.anotado ? "anotado" : "pendente"}`;
-    const img = document.createElement("img");
-    img.loading = "lazy";
-    img.alt = item.nome;
-    const url = `/api/dataset/imagens/${encodeURIComponent(item.nome)}?v=${encodeURIComponent(item.versao || "")}`;
-    const legenda = document.createElement("figcaption");
-    legenda.textContent = `${item.anotado ? "anotado" : "pendente"} - ${item.nome}`;
-    const retry = document.createElement("button");
-    retry.type = "button";
-    retry.textContent = "Imagem indisponivel. Tentar novamente";
-    retry.hidden = true;
-    img.onerror = () => { retry.hidden = false; };
-    img.onload = () => { retry.hidden = true; };
-    retry.onclick = () => { img.src = `${url}&retry=${Date.now()}`; };
-    img.src = url;
-    figure.append(img, legenda, retry);
-    fragmento.appendChild(figure);
-  }
-  galeriaEl.replaceChildren(fragmento);
+function criarMiniatura(item) {
+  const figura = document.createElement("figure");
+  figura.className = `thumb ${item.anotado ? "anotado" : "pendente"}`;
+  const imagem = document.createElement("img");
+  imagem.loading = "lazy";
+  imagem.alt = item.nome;
+  const url = `/api/dataset/imagens/${encodeURIComponent(item.nome)}?v=${encodeURIComponent(item.versao || "")}`;
+  const legenda = document.createElement("figcaption");
+  legenda.textContent = `${item.anotado ? "anotado" : "pendente"} - ${item.nome}`;
+  const botaoRepetir = document.createElement("button");
+  botaoRepetir.type = "button";
+  botaoRepetir.textContent = "Imagem indisponivel. Tentar novamente";
+  botaoRepetir.hidden = true;
+  // A nova consulta evita reaproveitar uma resposta de imagem que tenha falhado.
+  imagem.onerror = () => { botaoRepetir.hidden = false; };
+  imagem.onload = () => { botaoRepetir.hidden = true; };
+  botaoRepetir.onclick = () => { imagem.src = `${url}&retry=${Date.now()}`; };
+  imagem.src = url;
+  figura.append(imagem, legenda, botaoRepetir);
+  return figura;
 }
 
-carregarGaleria();
-atualizarStatusCaptura();
-setInterval(() => atualizarStatusCaptura().catch((e) => { capturaStatusEl.textContent = e.message; }), 4000);
+async function carregarGaleria() {
+  const { imagens } = await obterJson("/api/dataset/imagens");
+  totalGaleria.textContent = imagens.length;
+  const fragmento = document.createDocumentFragment();
+  imagens.forEach((item) => fragmento.appendChild(criarMiniatura(item)));
+  galeria.replaceChildren(fragmento);
+}
+
+carregarGaleria().catch((erro) => { statusCaptura.textContent = erro.message; });
+consultarCaptura();
+setInterval(consultarCaptura, 4000);

@@ -7,18 +7,18 @@ URL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_land
 
 
 def main():
-    target = ROOT / "models" / "hand_landmarker.task"
-    if target.is_file():
-        print(f"Modelo existente: {target}")
+    destino = ROOT / "models" / "hand_landmarker.task"
+    if destino.is_file():
+        print(f"Modelo existente: {destino}")
         return
-    target.parent.mkdir(parents=True, exist_ok=True)
-    temporary = target.with_suffix(".task.part")
+    destino.parent.mkdir(parents=True, exist_ok=True)
+    temporario = destino.with_suffix(".task.part")
     try:
-        urllib.request.urlretrieve(URL, temporary)
-        temporary.replace(target)
+        urllib.request.urlretrieve(URL, temporario)
+        temporario.replace(destino)
     finally:
-        temporary.unlink(missing_ok=True)
-    print(f"Modelo salvo: {target}")
+        temporario.unlink(missing_ok=True)
+    print(f"Modelo salvo: {destino}")
 
 
 if __name__ == "__main__":

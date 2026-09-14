@@ -4,7 +4,6 @@ Uso local (nao exposto publicamente - sem autenticacao):
     uvicorn main:app --reload --app-dir backend/app
 """
 import asyncio
-import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -24,7 +23,7 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         await asyncio.to_thread(worker.encerrar)
-        await asyncio.to_thread(camera.close)
+        await asyncio.to_thread(camera.fechar)
         state.main_loop = None
 
 

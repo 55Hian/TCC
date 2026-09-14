@@ -1,5 +1,4 @@
 import json
-import sys
 from pathlib import Path
 
 import numpy as np
@@ -7,12 +6,11 @@ import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from main import app
 from core.config import settings
 from routers import stream
 from services.event_service import gerar_eventos, calcular_area_intersecao
-from services.annotation_converter import labelme_json_to_yolo, converter_labelme_para_yolo
+from services.annotation_converter import converter_arquivo_labelme, converter_labelme_para_yolo
 
 
 def test_eventos_mao_sobre_produto_e_frame_vazio():
@@ -37,7 +35,7 @@ def test_conversao_retangulo_invertido_e_classe_desconhecida(tmp_path):
         dict(label="cha", points=[[80, 160], [20, 40]]),
         dict(label="desconhecido", points=[[0, 0], [10, 10]]),
     ])))
-    saida = labelme_json_to_yolo(str(entrada), str(tmp_path / "labels"), ["cha"])
+    saida = converter_arquivo_labelme(str(entrada), str(tmp_path / "labels"), ["cha"])
     assert Path(saida).read_text() == "0 0.500000 0.500000 0.600000 0.600000"
 
 
@@ -47,17 +45,17 @@ def test_conversao_dimensao_invalida_e_pasta_vazia(tmp_path):
     entrada = tmp_path / "frame.json"
     entrada.write_text(json.dumps(dict(imageWidth=0, imageHeight=100)))
     with pytest.raises(ValueError):
-        labelme_json_to_yolo(str(entrada), str(tmp_path / "labels"))
+        converter_arquivo_labelme(str(entrada), str(tmp_path / "labels"))
 
 
 
 def test_frontend_e_galeria_coerentes_com_arquivos():
-    with TestClient(app) as client:
-        for path in ["/", "/css/style.css"] + [f"/js/{name}.js" for name in
+    with TestClient(app) as cliente:
+        for caminho in ["/", "/css/style.css"] + [f"/js/{nome}.js" for nome in
                 ["api", "tabs", "dashboard", "treino", "dataset", "experimentos"]]:
-            assert client.get(path).status_code == 200, path
-        imagens = client.get("/api/dataset/imagens").json()["imagens"]
-        for img in imagens:
-            anotacao = Path(settings.LABELME_ANNOTATIONS_DIR) / (Path(img["nome"]).stem + ".json")
-            assert img["anotado"] == anotacao.is_file()
-            assert client.get("/api/dataset/imagens/" + img["nome"]).status_code == 200
+            assert cliente.get(caminho).status_code == 200, caminho
+        imagens = cliente.get("/api/dataset/imagens").json()["imagens"]
+        for imagem in imagens:
+            anotacao = Path(settings.LABELME_ANNOTATIONS_DIR) / (Path(imagem["nome"]).stem + ".json")
+            assert imagem["anotado"] == anotacao.is_file()
+            assert cliente.get("/api/dataset/imagens/" + imagem["nome"]).status_code == 200

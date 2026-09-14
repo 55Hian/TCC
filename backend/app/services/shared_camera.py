@@ -6,120 +6,141 @@ from core.config import settings
 from services.camera_service import gerador_de_frames
 
 
-class SharedCamera:
+IDADE_MAXIMA_FRAME_SEGUNDOS = 3
+
+
+class CameraCompartilhada:
     def __init__(self, url, source=gerador_de_frames):
         self.url = url
         self.source = source
-        self._lifecycle = threading.RLock()
-        self._consumers = {}
-        self._condition = threading.Condition()
-        self._stop = threading.Event()
-        self._thread = None
-        self._frame = None
-        self._sequence = 0
-        self._received = None
+        self._trava_ciclo = threading.RLock()
+        self._consumidores = {}
+        self._condicao = threading.Condition()
+        self._sinal_parada = threading.Event()
+        self._tarefa = None
+        self._imagem = None
+        self._sequencia = 0
+        self._ultimo_recebimento = None
         self._status = "parado"
-        self._error = None
+        self._erro = None
 
-    def start(self):
-        with self._condition:
-            if self._thread and self._thread.is_alive():
+    def iniciar(self):
+        with self._condicao:
+            if self._tarefa and self._tarefa.is_alive():
                 return
-            self._stop.clear()
-            self._frame = None
-            self._received = None
+            self._sinal_parada.clear()
+            self._imagem = None
+            self._ultimo_recebimento = None
             self._status = "conectando"
-            self._thread = threading.Thread(target=self._run, name="camera-reader", daemon=True)
-            self._thread.start()
+            self._tarefa = threading.Thread(target=self._ler_imagens, name="camera-reader", daemon=True)
+            self._tarefa.start()
 
-    def acquire(self, name):
-        with self._lifecycle:
-            token = object()
-            self.start()
-            self._consumers[token] = name
-            return token
+    def adquirir(self, name):
+        # Impede fechar a câmera durante uma aquisição de consumidor.
+        with self._trava_ciclo:
+            identificador_consumidor = object()
+            self.iniciar()
+            self._consumidores[identificador_consumidor] = name
+            return identificador_consumidor
 
-    def release(self, token):
-        with self._lifecycle:
-            self._consumers.pop(token, None)
-            if not self._consumers:
-                self.close()
+    def liberar(self, token):
+        with self._trava_ciclo:
+            self._consumidores.pop(token, None)
+            if not self._consumidores:
+                self.fechar()
 
-    def _report(self, status, error=None):
-        with self._condition:
-            self._status, self._error = status, error
-            self._frame = None
-            self._condition.notify_all()
+    def _registrar_status(self, status, error=None):
+        with self._condicao:
+            self._status, self._erro = status, error
+            self._imagem = None
+            self._condicao.notify_all()
 
-    def _run(self):
+    def _ler_imagens(self):
         try:
-            for frame in self.source(self.url, self._stop, self._report):
-                if self._stop.is_set():
+            for imagem in self.source(self.url, self._sinal_parada, self._registrar_status):
+                if self._sinal_parada.is_set():
                     break
-                with self._condition:
-                    self._frame = frame.copy()
-                    self._sequence += 1
-                    self._received = time.monotonic()
-                    self._status, self._error = "recebendo", None
-                    self._condition.notify_all()
-        except Exception as exc:
-            self._report("erro", str(exc))
+                with self._condicao:
+                    self._imagem = imagem.copy()
+                    self._sequencia += 1
+                    self._ultimo_recebimento = time.monotonic()
+                    self._status, self._erro = "recebendo", None
+                    self._condicao.notify_all()
+        except Exception as erro:
+            self._registrar_status("erro", str(erro))
         finally:
-            if self._stop.is_set():
-                self._report("parado")
+            if self._sinal_parada.is_set():
+                self._registrar_status("parado")
 
-    def wait_frame(self, sequence=0, timeout=0.5):
+    def _tem_frame_novo(self, sequencia):
+        """Consulta sob a condição adquirida; impede imagens antigas ou repetidas."""
+        return (self._imagem is not None and self._sequencia > sequencia
+                and time.monotonic() - self._ultimo_recebimento <= IDADE_MAXIMA_FRAME_SEGUNDOS)
+
+    def aguardar_frame(self, sequence=0, timeout=0.5):
         """Retorna copia independente; nunca entrega frame com mais de 3 segundos."""
-        with self._condition:
-            self._condition.wait_for(
-                lambda: self._stop.is_set() or (self._frame is not None and self._sequence > sequence
-                    and time.monotonic() - self._received <= 3),
+        with self._condicao:
+            self._condicao.wait_for(
+                lambda: self._sinal_parada.is_set() or self._tem_frame_novo(sequence),
                 timeout=timeout,
             )
-            if (self._stop.is_set() or self._frame is None or self._sequence <= sequence
-                    or time.monotonic() - self._received > 3):
+            if self._sinal_parada.is_set() or not self._tem_frame_novo(sequence):
                 return None
-            return self._sequence, self._frame.copy()
+            return self._sequencia, self._imagem.copy()
 
-    def frames(self, stop_event=None, timeout=15):
-        token = self.acquire("captura")
+    def gerar_frames(self, stop_event=None, timeout=15):
+        identificador_consumidor = self.adquirir("captura")
         try:
-            sequence = 0
-            last = time.monotonic()
-            while not self._stop.is_set() and not (stop_event and stop_event.is_set()):
-                item = self.wait_frame(sequence)
+            sequencia = 0
+            ultimo = time.monotonic()
+            while not self._sinal_parada.is_set() and not (stop_event and stop_event.is_set()):
+                item = self.aguardar_frame(sequencia)
                 if item is None:
-                    if time.monotonic() - last >= timeout:
+                    if time.monotonic() - ultimo >= timeout:
                         raise TimeoutError("Camera sem novos frames")
                     continue
-                sequence, frame = item
-                last = time.monotonic()
-                yield frame
+                sequencia, imagem = item
+                ultimo = time.monotonic()
+                yield imagem
         finally:
-            self.release(token)
+            self.liberar(identificador_consumidor)
 
     def status(self):
-        with self._lifecycle, self._condition:
-            age = None if self._received is None else time.monotonic() - self._received
+        with self._trava_ciclo, self._condicao:
+            idade = None if self._ultimo_recebimento is None else time.monotonic() - self._ultimo_recebimento
             status = self._status
-            if status == "recebendo" and age is not None and age > 3:
+            if status == "recebendo" and idade is not None and idade > IDADE_MAXIMA_FRAME_SEGUNDOS:
                 status = "sem_frames"
-            return {"status": status, "erro": self._error,
-                    "consumidores": list(self._consumers.values()),
-                    "idade_frame_segundos": age, "frames_recebidos": self._sequence}
+            return {"status": status, "erro": self._erro,
+                    "consumidores": list(self._consumidores.values()),
+                    "idade_frame_segundos": idade, "frames_recebidos": self._sequencia}
 
-    def close(self):
-        with self._lifecycle:
-            self._stop.set()
-            with self._condition:
-                self._condition.notify_all()
-            if self._thread:
-                self._thread.join(timeout=5)
-            if self._thread and self._thread.is_alive():
+    def fechar(self):
+        with self._trava_ciclo:
+            self._sinal_parada.set()
+            with self._condicao:
+                self._condicao.notify_all()
+            if self._tarefa:
+                self._tarefa.join(timeout=5)
+            if self._tarefa and self._tarefa.is_alive():
                 raise RuntimeError("Leitor da camera nao encerrou no prazo")
-            self._consumers.clear()
-            self._report("parado")
+            self._consumidores.clear()
+            self._registrar_status("parado")
+
+    # Compatibilidade com consumidores anteriores.
+    start = iniciar
+    acquire = adquirir
+    release = liberar
+    _report = _registrar_status
+    _run = _ler_imagens
+    wait_frame = aguardar_frame
+    frames = gerar_frames
+    close = fechar
 
 
 
-camera = SharedCamera(settings.ESP32_STREAM_URL)
+camera = CameraCompartilhada(settings.ESP32_STREAM_URL)
+
+
+# Compatibilidade de importação com os nomes anteriores.
+SharedCamera = CameraCompartilhada
