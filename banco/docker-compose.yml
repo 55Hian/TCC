@@ -1,0 +1,20 @@
+services:
+  db:
+    image: ankane/pgvector:latest
+    container_name: usuarios_control
+    environment:
+      POSTGRES_USER: TCC
+      POSTGRES_PASSWORD: estaacabando
+      POSTGRES_DB: TCC
+    ports:
+      - "5432:5432"
+    volumes:
+      # Volume nomeado gerenciado pelo Docker para persistência
+      - pgvector_data:/var/lib/postgresql/data
+      
+      # Mapeamento do script SQL para criação das tabelas
+      - ./banco_de_dados.sql:/docker-entrypoint-initdb.d/init.sql
+
+# Declaração do volume nomeado
+volumes:
+  pgvector_data:
