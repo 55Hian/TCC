@@ -1,0 +1,14 @@
+﻿fastapi
+uvicorn[standard]
+opencv-contrib-python==5.0.0.93
+numpy
+ultralytics
+torch
+torchvision
+mediapipe==0.10.35
+labelme
+PySide6==6.8.3
+PyYAML
+onnxruntime
+psycopg[binary]
+python-dotenv

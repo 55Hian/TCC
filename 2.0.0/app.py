@@ -1,47 +1,65 @@
-import subprocess
-import sys
-from datetime import datetime, timezone
-from pathlib import Path
+﻿"""API completa da versao 2.0.0."""
+from contextlib import asynccontextmanager
+import logging
+from threading import Event, Thread
 
 from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi.staticfiles import StaticFiles
+
+from config import ROOT
+from routes import balanca, banco, camera_secundaria, dashboard, eventos, modelos, monitoramento, produtos, treinamento
+from services.camera_secundaria import camera_secundaria as gravador_usb
+from services.database import inicializar
+from services.correlacao import executar_correlacao_periodica
+from services.monitoramento import monitor
+
+logger = logging.getLogger(__name__)
 
 
-app = FastAPI()
-eventos = []
-BASE_DIR = Path(__file__).resolve().parent
-SERVICES_DIR = BASE_DIR / "services"
+@asynccontextmanager
+async def ciclo_api(app):
+    logger.info("Iniciando API e verificando esquema do banco")
+    try:
+        inicializar()
+    except Exception:
+        logger.exception("Falha ao inicializar o banco; API nao iniciada")
+        raise
+    parar_correlacao = Event()
+    tarefa_correlacao = Thread(
+        target=executar_correlacao_periodica, args=(parar_correlacao,),
+        name="correlacao-retirada", daemon=True,
+    )
+    tarefa_correlacao.start()
+    try:
+        try:
+            gravador_usb.iniciar()
+        except Exception:
+            logger.exception("Nao foi possivel iniciar a camera secundaria")
+        logger.info("API iniciada; correlacao em execucao")
+        yield
+    finally:
+        logger.info("Encerrando workers da API")
+        parar_correlacao.set()
+        tarefa_correlacao.join(timeout=5)
+        monitor.parar()
+        gravador_usb.parar()
 
 
-class EventoEntrada(BaseModel):
-    tipo: str
-    produto: str
-    quantidade: int = 1
-    mao_id: int | None = None
-    produto_id: int | None = None
-    pontos_mao: list[int] | None = None
-    metodo: str | None = None
-    interpretacao: str | None = None
-
-@app.get("/")
-def ler_raiz():
-    return {"mensagem": "Olá, Mundo!"}
-
-@app.get("/capturar_frames_treinamento")
-def capturar_frames_treinamento():
-    subprocess.Popen([sys.executable, str(SERVICES_DIR / "captura_frames_treinamento.py")])
-    return {"response": "Foi solicitado  o inicio da captura de frames para treinamento."}
-
-@app.get("/iniciar_monitoramento")
-def iniciar_monitoramento():
-    subprocess.Popen([sys.executable, str(SERVICES_DIR / "iniciar_monitoramento.py")])
-    return {"response": "Foi solicitado o inicio do monitoramento."}
+app = FastAPI(title="Controle de Inventario 2.0.0", version="2.0.0", lifespan=ciclo_api)
+app.include_router(treinamento.router)
+app.include_router(monitoramento.router)
+app.include_router(modelos.router)
+app.include_router(eventos.router)
+app.include_router(dashboard.router)
+app.include_router(balanca.router)
+app.include_router(produtos.router)
+app.include_router(banco.router)
+app.include_router(camera_secundaria.router)
 
 
-@app.post("/api/eventos", status_code=201)
-def criar_evento(evento: EventoEntrada):
-    dados_evento = evento.model_dump(exclude_none=True)
-    dados_evento["timestamp"] = datetime.now(timezone.utc).isoformat()
-    eventos.append(dados_evento)
-    print(f"[API] Evento recebido: {dados_evento['tipo']} -> {dados_evento['produto']}")
-    return dados_evento
+@app.get("/api/health")
+def health():
+    return {"status": "ok", "versao": "2.0.0"}
+
+
+app.mount("/", StaticFiles(directory=str(ROOT / "web"), html=True), name="web")

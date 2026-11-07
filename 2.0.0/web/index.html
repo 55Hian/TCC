@@ -1,0 +1,102 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f6f3">
+  <title>Inventário · Controle</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#inicio"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="brand-name">inventário<span class="brand-version">2.0</span></span></a>
+    <div class="topbar-right"><span class="connection"><span class="connection-dot" id="healthDot"></span><span id="healthText">Conectando à API…</span></span><a class="docs-link" href="/docs" target="_blank" rel="noreferrer">Documentação ↗</a></div>
+  </header>
+  <main class="page">
+    <nav class="app-nav" aria-label="Navegação principal">
+      <a href="#inicio" data-view="inicio" class="active">Início</a>
+      <a href="#treinamento" data-view="treinamento">Treinamento</a>
+      <a href="#monitoramento-gondola" data-view="monitoramento-gondola">Monitoramento gôndola</a>
+      <a href="#monitoramento-ambiente" data-view="monitoramento-ambiente">Monitoramento ambiente</a>
+      <a href="#dados" data-view="dados">Dados do banco</a>
+      <a href="#produtos" data-view="produtos">Produtos</a>
+    </nav>
+
+    <section class="welcome">
+      <div><p class="eyebrow">PAINEL DE OPERAÇÃO <span>·</span> VERSÃO 2.0.0</p><h1 id="pageTitle">Início</h1><p class="welcome-copy" id="pageDescription">Estado do sistema e controle da câmera secundária.</p></div>
+      <div class="welcome-date"><span class="date-icon" aria-hidden="true">◷</span><span id="localClock">--:--:--</span><span class="date-caption">horário local</span></div>
+    </section>
+
+    <section class="view active" id="view-inicio" aria-labelledby="pageTitle">
+      <div class="summary-grid dashboard-kpis">
+        <article class="summary-card"><span>Interações · 24 horas</span><strong id="kpiEvents">—</strong><a href="#dados">Ver registros</a></article>
+        <article class="summary-card"><span>Variações da balança · 24 horas</span><strong id="kpiScale">—</strong><a href="#dados">Ver registros</a></article>
+        <article class="summary-card"><span>Correlações · 24 horas</span><strong id="kpiCorrelations">—</strong><a href="#dados">Ver registros</a></article>
+        <article class="summary-card"><span>Clipe aguardando ou com erro</span><strong id="kpiVideos">—</strong><a href="#monitoramento-ambiente">Câmera de evidência</a></article>
+      </div>
+      <div class="dashboard-grid">
+        <section class="card dashboard-inference"><div class="card-heading"><div class="heading-icon blue-icon">YOLO</div><div class="heading-copy"><p class="eyebrow">INFERÊNCIA AO VIVO</p><h2>Visão da gôndola</h2></div><span class="state-pill neutral" id="dashboardMonitorState">Verificando</span></div>
+          <div class="camera-view dashboard-camera"><div class="camera-placeholder" id="dashboardCameraPlaceholder"><span class="camera-symbol">◉</span><strong>Monitoramento parado</strong><span>Inicie o monitoramento gôndola para ver detecções e pontos da mão.</span></div><img id="dashboardCameraFrame" alt="Inferência YOLO com produtos e pontos da mão" hidden><div class="live-label" id="dashboardLiveLabel" hidden><span></span> AO VIVO</div></div>
+          <div class="dashboard-actions"><a class="button button-secondary" href="#monitoramento-gondola">Abrir monitoramento gôndola</a><span id="dashboardModel">Modelo ativo: —</span></div>
+        </section>
+        <section class="card dashboard-table-card"><div class="card-heading compact-heading"><div class="heading-copy"><p class="eyebrow">ÚLTIMOS REGISTROS</p><h2>Interações da câmera</h2></div><a class="text-button" href="#dados">Todos</a></div><div class="table-scroll"><table><thead><tr><th>Horário</th><th>Produto</th><th>ID</th></tr></thead><tbody id="dashboardEvents"><tr><td colspan="3" class="muted-cell">Carregando…</td></tr></tbody></table></div></section>
+        <section class="card dashboard-table-card"><div class="card-heading compact-heading"><div class="heading-copy"><p class="eyebrow">ÚLTIMAS LEITURAS</p><h2>Variações da balança</h2></div><a class="text-button" href="#dados">Todas</a></div><div class="table-scroll"><table><thead><tr><th>Horário</th><th>Variação</th><th>ID</th></tr></thead><tbody id="dashboardScale"><tr><td colspan="3" class="muted-cell">Carregando…</td></tr></tbody></table></div></section>
+        <section class="card dashboard-table-card dashboard-correlation-card"><div class="card-heading compact-heading"><div class="heading-copy"><p class="eyebrow">CÂMERA + BALANÇA</p><h2>Correlações de retirada</h2></div><a class="text-button" href="#dados">Todas</a></div><div class="table-scroll"><table><thead><tr><th>Retirada</th><th>Produto</th><th>Peso</th><th>Vídeo</th></tr></thead><tbody id="dashboardCorrelations"><tr><td colspan="4" class="muted-cell">Carregando…</td></tr></tbody></table></div></section>
+      </div>
+      <p class="dashboard-updated" id="dashboardUpdated">Atualizando dados…</p>
+    </section>
+
+    <section class="view" id="view-monitoramento-ambiente" aria-labelledby="pageTitle">
+      <section class="card camera-secondary-card">
+        <div class="card-heading"><div class="heading-icon dark-icon">USB</div><div class="heading-copy"><p class="eyebrow">CÂMERA DE EVIDÊNCIA</p><h2>Câmera secundária</h2></div><span class="state-pill neutral" id="usbState">Verificando</span></div>
+        <p class="field-help">A câmera mantém um buffer enquanto a API está ligada. Agende um clipe com o horário da retirada.</p>
+        <div class="usb-details" id="usbDetails">Carregando estado da câmera…</div>
+        <form id="clipForm" class="clip-form">
+          <label>ID do evento<input id="clipEventId" type="number" min="1" required placeholder="Ex.: 42"></label>
+          <label>Horário da retirada<input id="clipTimestamp" type="datetime-local" required></label>
+          <div class="clip-actions"><button class="button button-primary" type="submit" id="clipButton">Salvar clipe</button><button class="button button-secondary" type="button" id="clipCheckButton">Consultar estado</button></div>
+        </form>
+        <div class="inline-result" id="clipResult" aria-live="polite"></div>
+        <div class="table-scroll"><table><thead><tr><th>Evento</th><th>Estado do clipe</th><th>Arquivo</th></tr></thead><tbody id="clipsTable"><tr><td colspan="3" class="muted-cell">Nenhum clipe consultado.</td></tr></tbody></table></div>
+      </section>
+    </section>
+
+    <section class="view" id="view-treinamento">
+      <section class="card training-card"><div class="card-heading"><div class="heading-icon green-icon">01</div><div class="heading-copy"><p class="eyebrow">DADOS E MODELO</p><h2>Treinamento YOLO</h2></div><span class="state-pill neutral" id="trainingState">Ocioso</span></div>
+        <div class="steps">
+          <div class="step"><div class="step-number">1</div><div class="step-content"><h3>Capturar imagens</h3><p>Guarde frames da câmera para montar seu conjunto de dados.</p><form id="captureForm" class="inline-form"><label>Intervalo <span class="input-wrap"><input id="captureInterval" type="number" min="0.1" step="0.1" value="2" required><span>s</span></span></label><label>Quantidade <span class="input-wrap"><input id="captureCount" type="number" min="1" value="20" required><span>frames</span></span></label><button class="button button-primary" id="captureButton">Capturar</button></form><p class="step-feedback" id="captureFeedback">Pronto para capturar.</p></div></div>
+          <div class="step"><div class="step-number">2</div><div class="step-content"><h3>Anotar no Labelme</h3><p>Use caixas retangulares e os nomes das classes do modelo.</p><button class="button button-secondary" id="labelmeButton" type="button">Abrir Labelme</button><p class="step-feedback" id="labelmeFeedback">Imagens em <code>data/frames</code>.</p></div></div>
+          <div class="step step-last"><div class="step-number">3</div><div class="step-content"><h3>Treinar modelo</h3><form id="trainForm" class="inline-form"><label>Épocas <span class="input-wrap"><input id="trainEpochs" type="number" min="1" value="50" required></span></label><label>Resolução <span class="input-wrap"><input id="trainSize" type="number" min="32" step="32" value="640" required><span>px</span></span></label><button class="button button-primary" id="trainButton">Treinar</button></form><p class="step-feedback" id="trainFeedback">O melhor peso ficará em models/trained.</p></div></div>
+        </div>
+      </section>
+      <section class="card"><div class="card-heading compact-heading"><div class="heading-icon amber-icon">YOLO</div><div class="heading-copy"><p class="eyebrow">PESOS DISPONÍVEIS</p><h2>Modelo ativo</h2></div></div><div class="select-row model-controls"><select id="modelSelect" aria-label="Modelo treinado"></select><button class="button button-secondary" id="activateModel" type="button">Ativar</button></div><p class="field-help" id="modelHelp">Pare o monitoramento antes de trocar o modelo.</p><p class="model-message" id="modelMessage"></p></section>
+    </section>
+
+    <section class="view" id="view-monitoramento-gondola">
+      <section class="card monitor-card"><div class="card-heading"><div class="heading-icon dark-icon">02</div><div class="heading-copy"><p class="eyebrow">CÂMERA PRINCIPAL E INFERÊNCIA</p><h2>Monitoramento</h2></div><span class="state-pill neutral" id="monitorState">Parado</span></div>
+        <div class="monitor-actions"><button class="button button-primary" id="monitorStart">Iniciar monitoramento</button><button class="button button-stop" id="monitorStop" disabled>Parar</button></div><p class="error-line" id="monitorError" aria-live="polite"></p>
+        <div class="camera-view" id="cameraView"><div class="camera-placeholder" id="cameraPlaceholder"><span class="camera-symbol">◉</span><strong>Câmera desligada</strong><span>Inicie o monitoramento para ver o vídeo processado.</span></div><img id="cameraFrame" alt="Vídeo com caixas de produtos e pontos da mão" hidden><div class="live-label" id="liveLabel" hidden><span></span> AO VIVO</div></div>
+        <div class="monitor-foot"><span><i class="legend-box"></i> Produtos</span><span><i class="legend-points">•••</i> Pontos da mão</span><span class="model-in-use">Modelo <strong id="monitorModel">—</strong></span></div>
+      </section>
+    </section>
+
+    <section class="view" id="view-dados">
+      <div class="section-intro"><div><h2>Dados persistidos</h2><p>Consulte e administre os registros das tabelas do banco.</p></div><button class="button button-secondary" id="dbReload">Atualizar lista</button></div>
+      <section class="card"><div class="db-toolbar"><label>Tabela<select id="dbTableSelect" disabled></select></label><span class="count-pill" id="dbCount">0 registros</span><button class="button button-primary" id="dbNew" disabled>Novo registro</button></div><p class="field-help" id="dbTableHelp"></p><div class="table-scroll"><table><thead id="dbHead"></thead><tbody id="dbRows"></tbody></table></div><div class="pagination"><button class="button button-secondary" id="dbPrevious">Anterior</button><span id="dbPage">Página 1</span><button class="button button-secondary" id="dbNext">Próxima</button></div></section>
+      <section class="card editor-card" id="dbEditor" hidden><div class="card-heading compact-heading"><div class="heading-copy"><p class="eyebrow">EDIÇÃO DE REGISTRO</p><h2 id="dbEditorTitle">Novo registro</h2></div><button class="button button-secondary" id="dbCancel">Cancelar</button></div><form id="dbForm" class="form-grid"></form><p class="inline-result" id="dbMessage" aria-live="polite"></p></section>
+    </section>
+
+    <section class="view" id="view-produtos">
+      <div class="section-intro"><div><h2>Catálogo de produtos</h2><p>Cadastre o nome apresentado e a classe usada pelo modelo YOLO.</p></div></div>
+      <section class="card"><div class="card-heading compact-heading"><div class="heading-icon green-icon">＋</div><div class="heading-copy"><p class="eyebrow">CATÁLOGO</p><h2 id="productFormTitle">Novo produto</h2></div></div>
+        <form id="productForm" class="form-grid"><label>Nome<input id="productName" maxlength="120" required placeholder="Ex.: Chá"></label><label>Classe do modelo<input id="productClass" maxlength="100" required placeholder="Ex.: cha"></label><label>Peso unitário<input id="productWeight" type="number" min="0.001" step="any" required placeholder="Ex.: 0.125"></label><p class="field-help">Use a mesma unidade que a balança envia em `variacao_peso`.</p><p class="field-help wide-field">A classe precisa corresponder exatamente ao nome aprendido pelo modelo YOLO; ela associa as interações ao produto.</p><label class="wide-field">Descrição<textarea id="productDescription" maxlength="2000" rows="2"></textarea></label><label class="check-field"><input id="productActive" type="checkbox" checked> Ativo</label><div class="form-actions"><button class="button button-primary" id="productSave">Cadastrar produto</button><button class="button button-secondary" id="productCancel" type="button" hidden>Cancelar edição</button></div></form><p class="inline-result" id="productMessage" aria-live="polite"></p>
+      </section>
+      <section class="card"><div class="card-heading compact-heading"><div class="heading-copy"><p class="eyebrow">REGISTROS</p><h2>Produtos cadastrados</h2></div><button class="button button-secondary" id="productReload">Atualizar</button></div><div class="table-scroll"><table><thead><tr><th>ID</th><th>Nome</th><th>Classe YOLO</th><th>Peso unitário</th><th>Descrição</th><th>Ativo</th><th>Criado em</th><th>Atualizado em</th><th>Ações</th></tr></thead><tbody id="productRows"></tbody></table></div></section>
+    </section>
+
+    <footer class="page-footer"><span>INVENTÁRIO <b>·</b> 2.0.0</span><span>Processamento local · Dados em <code>data/</code></span></footer>
+  </main>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
