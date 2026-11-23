@@ -27,6 +27,19 @@ Aguarde o banco ficar saudavel antes de iniciar a API. Abra `http://localhost:80
 
 `POST /api/monitoramento/iniciar` inicia camera, YOLO e landmarks da mao. As interacoes detectadas sao enviadas pela rota `/api/eventos` e gravadas no banco. Use `/api/monitoramento/parar`, `/api/monitoramento/status` e `/api/monitoramento/frame` para controlar e acompanhar o fluxo. `GET /api/eventos` consulta os registros persistidos.
 
+`GET /api/monitoramento/stream` entrega o video processado em MJPEG (uma conexao continua, usada pelas telas Inicio e Monitoramento gondola). A leitura da camera principal roda em uma thread propria e guarda apenas o quadro mais recente: quando o processamento e mais lento que a camera, os quadros antigos sao descartados em vez de acumular atraso. O envio dos eventos para `/api/eventos` tambem roda em uma thread separada, com ate 3 tentativas; uma falha de envio nao interrompe o monitoramento.
+
+`GET /api/monitoramento/status` inclui `metricas`, media dos ultimos 30 quadros: `fps`, `latencia_ms` (da chegada do quadro ate a imagem processada), `etapas_ms` (decodificacao, yolo, maos, saida e total), `quadros_processados`, `quadros_descartados` e `dispositivo_yolo`.
+
+### Desempenho
+
+- `TCC_YOLO_DEVICE`: vazio usa a GPU automaticamente quando o PyTorch tem CUDA; `cpu` ou `0` forcam o dispositivo. O log informa onde o YOLO foi carregado.
+- `TCC_YOLO_IMGSZ`: resolucao de inferencia (padrao `640`, a mesma do treino). Valores menores, como `416`, aceleram a CPU mas devem ser validados quanto a precisao.
+- `TCC_STREAM_FPS`: limite de quadros por segundo enviados ao navegador (padrao `15`).
+- `TCC_CAMARA_LARGURA` e `TCC_CAMARA_ALTURA`: resolucao pedida a camera USB de evidencia (padrao `640` x `480`).
+- O `pip install -r requirements.txt` instala o PyTorch sem CUDA no Windows. Em computadores com GPU NVIDIA (por exemplo, a GTX 1650), reinstale com `pip install --force-reinstall torch torchvision --index-url https://download.pytorch.org/whl/cu124` e confira com `python -c "import torch; print(torch.cuda.is_available())"`.
+- Configure o ESP32-CAM em VGA (640x480) e evite abrir o stream da placa em outra aba enquanto a aplicacao roda: a placa atende bem apenas um cliente por vez.
+
 ## Banco de dados
 
 Somente `POST /api/eventos` e `POST /api/balanca` gravam registros de entrada no PostgreSQL. `database/schema.sql` mantem o esquema completo: usuarios, sessoes de tracking e compra, eventos, variacoes da balanca e correlacoes de retirada. A API aplica o esquema ao iniciar. Os clipes da segunda camera sao salvos em `data/videos`; a rota de clipe nao grava novos registros no banco.

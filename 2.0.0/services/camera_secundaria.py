@@ -10,8 +10,8 @@ import cv2
 import numpy as np
 
 from config import (
-    CAMERA_USB_BACKEND, VIDEO_AFTER_SECONDS, VIDEO_BEFORE_SECONDS, VIDEO_BUFFER_SECONDS,
-    VIDEO_DIR, camera_usb_backend, camera_usb_source,
+    CAMERA_USB_BACKEND, CAMERA_USB_HEIGHT, CAMERA_USB_WIDTH, VIDEO_AFTER_SECONDS,
+    VIDEO_BEFORE_SECONDS, VIDEO_BUFFER_SECONDS, VIDEO_DIR, camera_usb_backend, camera_usb_source,
 )
 
 log = logging.getLogger(__name__)
@@ -20,8 +20,11 @@ log = logging.getLogger(__name__)
 class CameraSecundaria:
     def __init__(self, fonte=None, pasta_saida=None, segundos_antes=None,
                  segundos_depois=None, fps_buffer=10, qualidade_jpeg=78,
-                 segundos_buffer=None):
+                 segundos_buffer=None, largura=None, altura=None):
         self.fonte = camera_usb_source() if fonte is None else fonte
+        self.largura = CAMERA_USB_WIDTH if largura is None else largura
+        self.altura = CAMERA_USB_HEIGHT if altura is None else altura
+        self._resolucao = None
         self.backend_nome = CAMERA_USB_BACKEND
         self.backend = camera_usb_backend(cv2)
         self.pasta_saida = Path(pasta_saida or VIDEO_DIR)
@@ -64,8 +67,16 @@ class CameraSecundaria:
 
     def _abrir_camera(self):
         if self.backend is None:
-            return cv2.VideoCapture(self.fonte)
-        return cv2.VideoCapture(self.fonte, self.backend)
+            camera = cv2.VideoCapture(self.fonte)
+        else:
+            camera = cv2.VideoCapture(self.fonte, self.backend)
+        if camera.isOpened() and self.largura and self.altura:
+            # Resolucao menor reduz o custo de captura e de compressao de cada quadro.
+            camera.set(cv2.CAP_PROP_FRAME_WIDTH, self.largura)
+            camera.set(cv2.CAP_PROP_FRAME_HEIGHT, self.altura)
+            self._resolucao = "{}x{}".format(int(camera.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                                             int(camera.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+        return camera
 
     def _capturar(self):
         self._carregar_buffer()
@@ -85,13 +96,17 @@ class CameraSecundaria:
                 with self._lock:
                     self._estado, self._erro = "rodando", None
                 while not self._parar.is_set():
-                    sucesso, imagem = camera.read()
-                    if not sucesso:
+                    # grab() apenas consome o quadro; a conversao (retrieve) so e feita
+                    # para os quadros que entram no buffer, economizando CPU.
+                    if not camera.grab():
                         raise RuntimeError("Falha lendo a camera USB")
                     agora = time.time()
                     if agora < proximo_frame:
                         continue
                     proximo_frame = agora + intervalo
+                    sucesso, imagem = camera.retrieve()
+                    if not sucesso:
+                        raise RuntimeError("Falha decodificando quadro da camera USB")
                     ok, jpeg = cv2.imencode(
                         ".jpg", imagem,
                         [cv2.IMWRITE_JPEG_QUALITY, self.qualidade_jpeg],
@@ -234,6 +249,7 @@ class CameraSecundaria:
                 "erro": self._erro,
                 "fonte": str(self.fonte),
                 "backend": self.backend_nome,
+                "resolucao": self._resolucao,
                 "frames_buffer": len(self._frames),
                 "segundos_buffer": round(duracao_buffer, 1),
                 "segundos_retencao": self.segundos_buffer,

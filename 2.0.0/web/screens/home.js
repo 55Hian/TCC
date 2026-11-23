@@ -1,6 +1,6 @@
-import { api, addCell, formatTime } from "../api.js";
+import { api, addCell, formatTime, startStream, stopStream } from "../api.js";
 
-let frameUrl;
+let wasRunning = false;
 let loading = false;
 
 function renderTable(element, rows, columns, empty) {
@@ -34,20 +34,22 @@ function renderVideo(row, correlation) {
   row.append(cell);
 }
 
-async function refreshFrame() {
-  try {
-    const response = await fetch(`/api/monitoramento/frame?t=${Date.now()}`);
-    if (!response.ok) return;
-    if (frameUrl) URL.revokeObjectURL(frameUrl);
-    frameUrl = URL.createObjectURL(await response.blob());
-    document.getElementById("dashboardCameraFrame").src = frameUrl;
-    document.getElementById("dashboardCameraFrame").hidden = false;
-    document.getElementById("dashboardCameraPlaceholder").hidden = true;
-    document.getElementById("dashboardLiveLabel").hidden = false;
-  } catch { /* A próxima atualização tenta novamente. */ }
+function showStream() {
+  const frame = document.getElementById("dashboardCameraFrame");
+  if (!wasRunning) stopStream(frame); // nova execução: reabre a conexão
+  startStream(frame);
+  frame.hidden = false;
+  document.getElementById("dashboardCameraPlaceholder").hidden = true;
+  document.getElementById("dashboardLiveLabel").hidden = false;
+  wasRunning = true;
 }
 
 export function init() {}
+
+export function leave() {
+  stopStream(document.getElementById("dashboardCameraFrame"));
+  wasRunning = false;
+}
 
 export async function refresh() {
   if (loading) return;
@@ -64,8 +66,10 @@ export async function refresh() {
     document.getElementById("dashboardMonitorState").textContent = monitor.status;
     document.getElementById("dashboardMonitorState").className = `state-pill ${monitor.status === "rodando" ? "good" : monitor.status === "erro" ? "bad" : "neutral"}`;
     document.getElementById("dashboardModel").textContent = `Modelo ativo: ${data.modelo_ativo || "—"}`;
-    if (monitor.status === "rodando") await refreshFrame();
+    if (monitor.status === "rodando") showStream();
     else {
+      if (!["iniciando", "aguardando_camera"].includes(monitor.status)) stopStream(document.getElementById("dashboardCameraFrame"));
+      wasRunning = false;
       document.getElementById("dashboardCameraFrame").hidden = true;
       document.getElementById("dashboardLiveLabel").hidden = true;
       document.getElementById("dashboardCameraPlaceholder").hidden = false;

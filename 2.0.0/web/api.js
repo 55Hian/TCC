@@ -43,6 +43,26 @@ export function statePill(element, state) {
   element.classList.add(["rodando", "agendada", "concluida"].includes(state) ? "busy" : ["parado", "concluida", "nao_solicitado"].includes(state) ? "good" : ["erro", "reconectando"].includes(state) ? "bad" : "neutral");
 }
 
+// Vídeo processado em MJPEG: uma conexão contínua por <img>, no lugar de buscar fotos a cada atualização.
+export function startStream(img) {
+  if (img.dataset.streaming === "1") return;
+  img.dataset.streaming = "1";
+  img.onerror = () => { delete img.dataset.streaming; };
+  img.src = `/api/monitoramento/stream?t=${Date.now()}`;
+}
+
+export function stopStream(img) {
+  delete img.dataset.streaming;
+  img.onerror = null;
+  img.removeAttribute("src");
+}
+
+export function formatMetrics(metrics) {
+  if (!metrics || metrics.fps == null) return "";
+  const stages = metrics.etapas_ms || {};
+  return `${metrics.fps} FPS · YOLO ${stages.yolo ?? "—"} ms · mãos ${stages.maos ?? "—"} ms · latência ${metrics.latencia_ms} ms · ${metrics.dispositivo_yolo || "?"}`;
+}
+
 export function elements(...ids) {
   return Object.fromEntries(ids.map((id) => [id, document.getElementById(id)]));
 }

@@ -1,15 +1,15 @@
 ﻿import { api, showToast } from "./api.js";
-import { init as initHome, refresh as refreshHome } from "./screens/home.js";
+import { init as initHome, refresh as refreshHome, leave as leaveHome } from "./screens/home.js";
 import { init as initEnvironment, refresh as refreshEnvironment } from "./screens/environment.js";
 import { init as initTraining, refresh as refreshTraining } from "./screens/training.js";
-import { init as initMonitoring, refresh as refreshMonitoring } from "./screens/monitoring.js";
+import { init as initMonitoring, refresh as refreshMonitoring, leave as leaveMonitoring } from "./screens/monitoring.js";
 import { init as initDatabase, refresh as refreshDatabase } from "./screens/database.js";
 import { init as initProducts, refresh as refreshProducts } from "./screens/products.js";
 
 const pages = {
-  inicio: { title: "Início", description: "Resumo ao vivo das interações, da balança, das correlações e da inferência YOLO.", refresh: refreshHome },
+  inicio: { title: "Início", description: "Resumo ao vivo das interações, da balança, das correlações e da inferência YOLO.", refresh: refreshHome, leave: leaveHome },
   treinamento: { title: "Treinamento", description: "Capture imagens, anote e treine seu modelo YOLO.", refresh: refreshTraining },
-  "monitoramento-gondola": { title: "Monitoramento gôndola", description: "Acompanhe e controle a câmera principal, as mãos e os produtos detectados.", refresh: refreshMonitoring },
+  "monitoramento-gondola": { title: "Monitoramento gôndola", description: "Acompanhe e controle a câmera principal, as mãos e os produtos detectados.", refresh: refreshMonitoring, leave: leaveMonitoring },
   "monitoramento-ambiente": { title: "Monitoramento ambiente", description: "Acompanhe o buffer e os clipes da câmera secundária.", refresh: refreshEnvironment },
   dados: { title: "Dados do banco", description: "Visualize e administre as tabelas persistidas pela API.", refresh: refreshDatabase },
   produtos: { title: "Produtos", description: "Gerencie o catálogo associado às classes do modelo.", refresh: refreshProducts },
@@ -30,7 +30,10 @@ async function checkHealth() {
 }
 
 function showPage(name) {
-  activePage = pages[name] ? name : "inicio";
+  const next = pages[name] ? name : "inicio";
+  // Fecha o vídeo da tela anterior para não manter duas conexões de streaming abertas.
+  if (next !== activePage) pages[activePage].leave?.();
+  activePage = next;
   document.querySelectorAll(".view").forEach((view) => {
     view.classList.toggle("active", view.id === `view-${activePage}`);
   });

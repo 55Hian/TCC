@@ -1,7 +1,6 @@
-import { api, showToast, statePill, elements } from "../api.js";
-const { monitorStart, monitorStop, monitorError, monitorState, modelSelect, activateModel, cameraFrame, cameraPlaceholder, liveLabel } = elements("monitorStart", "monitorStop", "monitorError", "monitorState", "modelSelect", "activateModel", "cameraFrame", "cameraPlaceholder", "liveLabel");
+import { api, showToast, statePill, elements, startStream, stopStream, formatMetrics } from "../api.js";
+const { monitorStart, monitorStop, monitorError, monitorState, modelSelect, activateModel, cameraFrame, cameraPlaceholder, liveLabel, monitorMetrics } = elements("monitorStart", "monitorStop", "monitorError", "monitorState", "modelSelect", "activateModel", "cameraFrame", "cameraPlaceholder", "liveLabel", "monitorMetrics");
 
-let frameUrl;
 let wasActive = false;
 
 export function init() {
@@ -15,17 +14,15 @@ export function init() {
   });
 }
 
-async function showFrame() {
-  try {
-    const response = await fetch(`/api/monitoramento/frame?t=${Date.now()}`);
-    if (!response.ok) return;
-    if (frameUrl) URL.revokeObjectURL(frameUrl);
-    frameUrl = URL.createObjectURL(await response.blob());
-    cameraFrame.src = frameUrl;
-    cameraFrame.hidden = false;
-    cameraPlaceholder.hidden = true;
-    liveLabel.hidden = false;
-  } catch { /* Preserva o último frame exibido. */ }
+function showStream() {
+  startStream(cameraFrame);
+  cameraFrame.hidden = false;
+  cameraPlaceholder.hidden = true;
+  liveLabel.hidden = false;
+}
+
+export function leave() {
+  stopStream(cameraFrame);
 }
 
 export async function refresh() {
@@ -38,6 +35,8 @@ export async function refresh() {
     modelSelect.disabled = active;
     activateModel.disabled = active;
     monitorError.textContent = result.erro || "";
+    monitorMetrics.textContent = active ? formatMetrics(result.metricas) : "";
+    if (!active) stopStream(cameraFrame);
     if (result.status === "erro" || (!active && wasActive)) {
       cameraPlaceholder.hidden = false;
       cameraPlaceholder.querySelector("strong").textContent = result.status === "erro" ? "Não foi possível iniciar" : "Câmera desligada";
@@ -45,7 +44,8 @@ export async function refresh() {
       cameraFrame.hidden = true;
       liveLabel.hidden = true;
     }
+    if (active && !wasActive) stopStream(cameraFrame); // nova execução: reabre a conexão
     wasActive = active;
-    if (active) await showFrame();
+    if (result.status === "rodando") showStream();
   } catch (error) { monitorError.textContent = error.message; }
 }

@@ -77,7 +77,7 @@
       <section class="card monitor-card"><div class="card-heading"><div class="heading-icon dark-icon">02</div><div class="heading-copy"><p class="eyebrow">CÂMERA PRINCIPAL E INFERÊNCIA</p><h2>Monitoramento</h2></div><span class="state-pill neutral" id="monitorState">Parado</span></div>
         <div class="monitor-actions"><button class="button button-primary" id="monitorStart">Iniciar monitoramento</button><button class="button button-stop" id="monitorStop" disabled>Parar</button></div><p class="error-line" id="monitorError" aria-live="polite"></p>
         <div class="camera-view" id="cameraView"><div class="camera-placeholder" id="cameraPlaceholder"><span class="camera-symbol">◉</span><strong>Câmera desligada</strong><span>Inicie o monitoramento para ver o vídeo processado.</span></div><img id="cameraFrame" alt="Vídeo com caixas de produtos e pontos da mão" hidden><div class="live-label" id="liveLabel" hidden><span></span> AO VIVO</div></div>
-        <div class="monitor-foot"><span><i class="legend-box"></i> Produtos</span><span><i class="legend-points">•••</i> Pontos da mão</span><span class="model-in-use">Modelo <strong id="monitorModel">—</strong></span></div>
+        <div class="monitor-foot"><span><i class="legend-box"></i> Produtos</span><span><i class="legend-points">•••</i> Pontos da mão</span><span id="monitorMetrics" title="Média dos últimos 30 quadros processados"></span><span class="model-in-use">Modelo <strong id="monitorModel">—</strong></span></div>
       </section>
     </section>
 
